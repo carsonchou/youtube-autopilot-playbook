@@ -22,6 +22,8 @@ SENT = re.compile(r"[^。!?！？\n]+")
 YEAR = re.compile(r"(19|20)\d\d$")
 NEG_CHARS = set("-−－﹣–—")
 UNIT_BLANK = {"的", "是", "在", "和", "與", "及", "，", "、"}
+# 全形數字/小數點先轉半形,否則「１２．５%」整個看不見 = 靜默放行
+FULLWIDTH = str.maketrans("０１２３４５６７８９．", "0123456789.")
 
 
 def _unit_after(text, pos):
@@ -63,7 +65,7 @@ def _iter_numbers(text):
 
 def _fact_tokens(value):
     """一筆 fact value 裡每個數字連同其單位,回傳 {(number, unit), ...}。"""
-    text = str(value)
+    text = str(value).translate(FULLWIDTH)
     return {(num, _unit_after(text, end)) for end, num in _iter_numbers(text)}
 
 
@@ -72,7 +74,7 @@ def check(script, facts):
     texts += [seg.get("text", "") for seg in script.get("segments", [])]
     problems = []
     for text in texts:
-        for sent in SENT.findall(text):
+        for sent in SENT.findall(text.translate(FULLWIDTH)):
             for end, n in _iter_numbers(sent):
                 if YEAR.match(n) and sent[end:end + 1] == "年":
                     continue  # 年份豁免,見上方 docstring
@@ -94,6 +96,6 @@ def check(script, facts):
                     problems.append("數字 %s%s 的歸屬有歧義,同一句還出現 %s:「%s」"
                                      % (n, unit, "、".join(other_subjects), sent))
     # 以下是刻意不處理、發布前要人工看的已知漏洞,完整清單見 PLAYBOOK.md §5:
-    # 中文數字抓不到、facts 裡沒登記的新主體看不出是另一個主體、主體比對用子字串
+    # 中文數字抓不到(全形阿拉伯數字會先轉半形,有檢查)、facts 裡沒登記的新主體看不出是另一個主體、主體比對用子字串
     # (「中鋼」對得上「中鋼構」)、斷句只認「。!?！?」和換行、19xx/20xx 接「年」一律放行。
     return problems

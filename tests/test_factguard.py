@@ -123,3 +123,9 @@ def test_year_exemption_requires_year_suffix_mutation_guard():
 def test_year_exemption_uses_match_not_search_mutation_guard():
     # 若把 YEAR.match 換成 YEAR.search,"12024" 會被誤判成含有 2024 這個年份而放行
     assert check(S("12024年之後淨利有機會翻倍。"), [])
+
+
+def test_fullwidth_digits_are_checked():
+    facts = [{"subject": "甲公司", "value": "毛利率12.5%"}]
+    assert check({"segments": [{"text": "甲公司毛利率是４７．３%"}]}, facts)
+    assert check({"segments": [{"text": "甲公司毛利率是１２．５%"}]}, facts) == []
