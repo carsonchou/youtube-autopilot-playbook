@@ -3,7 +3,7 @@
 背書 12.5 倍)。同句出現另一個已知主體時歸屬有歧義,一樣擋。無法判定一律擋(fail-closed)。"""
 import re
 
-NUM = re.compile(r"\d[\d,]*(?:\.\d+)?")
+NUM = re.compile(r"[-−]?\d[\d,]*(?:\.\d+)?")
 SENT = re.compile(r"[^。！？!?\n]+")
 YEAR = re.compile(r"(19|20)\d\d$")
 UNIT_CHARS = {"%": "%", "％": "%", "倍": "倍", "萬": "萬", "億": "億", "元": "元"}
@@ -14,10 +14,16 @@ def _unit_after(text, pos):
     return UNIT_CHARS.get(text[pos:pos + 1], "")
 
 
+def _normalize_num(raw):
+    """去除千分位逗號,並把全形/數學負號統一成半形 -,讓正負號算進數字本身
+    (12.5% 不能拿來背書 -12.5%)。"""
+    return raw.replace(",", "").replace("−", "-")
+
+
 def _fact_tokens(value):
     """一筆 fact value 裡每個數字連同其單位,回傳 {(number, unit), ...}。"""
     text = str(value)
-    return {(m.group().replace(",", ""), _unit_after(text, m.end())) for m in NUM.finditer(text)}
+    return {(_normalize_num(m.group()), _unit_after(text, m.end())) for m in NUM.finditer(text)}
 
 
 def check(script, facts):
@@ -27,7 +33,7 @@ def check(script, facts):
     for text in texts:
         for sent in SENT.findall(text):
             for m in NUM.finditer(sent):
-                n = m.group().replace(",", "")
+                n = _normalize_num(m.group())
                 if YEAR.match(n) and sent[m.end():m.end() + 1] == "年":
                     continue  # 年份(限 19xx/20xx 接「年」,3000 這種不算)
                 unit = _unit_after(sent, m.end())
@@ -49,5 +55,8 @@ def check(script, facts):
                                      % (n, unit, "、".join(other_subjects), sent))
     # ponytail: 只抓阿拉伯數字;「三成」「十二億」這類中文數字抓不到
     # ponytail: 主體排除只認得出現在 facts 清單裡的主體;句中出現的是沒登記在 facts 的新主體
-    #           (例如「乙」不在 facts 裡)時,看不出那是另一個主體,擋不到 —— 這兩類都要靠人工看
+    #           (例如「乙」不在 facts 裡)時,看不出那是另一個主體,擋不到
+    # ponytail: 19xx/20xx 接「年」一律當年份放行,不查真假,也不管有沒有對應的 fact
+    # ponytail: 負號只認緊接數字前的 - 或 −;「10-20元」這種當範圍用的連字號會被誤讀成
+    #           負的 20,一樣要靠人工看 —— 這幾類都要靠人工看
     return problems

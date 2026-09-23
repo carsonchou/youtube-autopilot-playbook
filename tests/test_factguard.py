@@ -42,3 +42,17 @@ FACTS_TWO = [{"subject": "甲", "value": "12.5%"}, {"subject": "丙", "value": "
 def test_ambiguous_subject_blocked():
     # A3:句中同時出現另一個「不擁有此數字」的已知 fact 主體,歸屬有歧義,要擋
     assert check(S("丙公司比甲公司的12.5%高。"), FACTS_TWO)
+
+FACTS_NEG = [{"subject": "乙公司", "value": "-12.5%"}]
+
+def test_negative_sign_ignored_blocked():
+    # 正負號要算進數字本身:facts 是 12.5%(正),不能拿來背書 -12.5%
+    assert check(S("甲公司毛利率是-12.5%。"), FACTS)
+
+def test_negative_sign_matched_passes():
+    # facts 本身是負的,腳本寫同號的負數才放行
+    assert check(S("乙公司毛利率是-12.5%。"), FACTS_NEG) == []
+
+def test_negative_fact_does_not_cover_positive_script():
+    # facts 是 -12.5%,腳本寫成正的 12.5% 一樣要擋(正負號不同視為不同數字)
+    assert check(S("乙公司毛利率是12.5%。"), FACTS_NEG)
