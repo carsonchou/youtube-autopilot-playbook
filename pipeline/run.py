@@ -46,8 +46,12 @@ def main(argv=None):
     out_root.mkdir(parents=True, exist_ok=True)
     used_file = out_root / "topics_used.json"
     used = [] if a.dry_run or not used_file.exists() else json.loads(used_file.read_text(encoding="utf-8"))
+    performance_file = out_root / "performance.json"
+    performance = None
+    if not a.dry_run and performance_file.exists():
+        performance = json.loads(performance_file.read_text(encoding="utf-8"))
 
-    topic = topics.pick_topic(niche, used, llm)
+    topic = topics.pick_topic(niche, used, llm, performance=performance)
     job = out_root / time.strftime("%Y%m%d-%H%M%S")
     job.mkdir()
     s = script.write_script(topic, niche, llm)
@@ -61,11 +65,22 @@ def main(argv=None):
         used_file.write_text(json.dumps(used + [topic], ensure_ascii=False, indent=2), encoding="utf-8")
     print("影片:%s" % video)
     if a.upload:
-        from .upload import upload
-        vid = upload(video, s["title"], s["description"],
-                     os.environ.get("YT_CLIENT_SECRETS") or "client_secrets.json",
-                     os.environ.get("YT_TOKEN") or "token.json")
+        from .upload import finish, upload
+        client_secrets = os.environ.get("YT_CLIENT_SECRETS") or "client_secrets.json"
+        token_path = os.environ.get("YT_TOKEN") or "token.json"
+        vid = upload(video, s["title"], s["description"], client_secrets, token_path)
+        # 先落紀錄再收尾:縮圖/播放清單失敗時,已上傳的片不會失去紀錄
+        published_file = out_root / "published.json"
+        published = json.loads(published_file.read_text(encoding="utf-8")) if published_file.exists() else []
+        published.append({"video_id": vid, "topic": topic, "title": s["title"],
+                           "published": time.strftime("%Y-%m-%d")})
+        tmp = published_file.with_suffix(".tmp.json")
+        tmp.write_text(json.dumps(published, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, published_file)
         print("已上傳(private):https://youtu.be/%s" % vid)
+        finish(vid, client_secrets, token_path,
+               thumbnail=job / "card00.png",
+               playlist_id=niche.get("playlist_id") or None)
 
 
 if __name__ == "__main__":

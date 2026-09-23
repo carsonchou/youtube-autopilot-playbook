@@ -1,23 +1,36 @@
 from pathlib import Path
 
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl",
+          "https://www.googleapis.com/auth/yt-analytics.readonly"]
 
 
-def upload(video, title, description, client_secrets, token_path, privacy="private"):
-    """用 YouTube Data API 官方上傳。預設 private,公開與否由人自己在 Studio 決定。"""
+def get_credentials(client_secrets, token_path):
+    """回傳有 SCOPES 全部權限的 OAuth 憑證。舊 token 權限不夠(例如只有舊版 youtube.upload)
+    時,不能沿用,要重新走一次授權流程。"""
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
     from google_auth_oauthlib.flow import InstalledAppFlow
-    from googleapiclient.discovery import build
-    from googleapiclient.http import MediaFileUpload
 
-    creds = Credentials.from_authorized_user_file(token_path, SCOPES) if Path(token_path).exists() else None
+    creds = None
+    if Path(token_path).exists():
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+        if not creds.has_scopes(SCOPES):
+            creds = None
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             creds = InstalledAppFlow.from_client_secrets_file(client_secrets, SCOPES).run_local_server(port=0)
         Path(token_path).write_text(creds.to_json(), encoding="utf-8")
+    return creds
+
+
+def upload(video, title, description, client_secrets, token_path, privacy="private"):
+    """用 YouTube Data API 官方上傳。預設 private,公開與否由人自己在 Studio 決定。"""
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload
+
+    creds = get_credentials(client_secrets, token_path)
     yt = build("youtube", "v3", credentials=creds)
     req = yt.videos().insert(
         part="snippet,status",
@@ -29,3 +42,20 @@ def upload(video, title, description, client_secrets, token_path, privacy="priva
     while resp is None:
         _, resp = req.next_chunk()
     return resp["id"]
+
+
+def finish(video_id, client_secrets, token_path, thumbnail=None, playlist_id=None):
+    """上傳後的收尾:設縮圖、加進播放清單。錯誤不吞,讓呼叫端知道哪一步失敗。"""
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload
+
+    creds = get_credentials(client_secrets, token_path)
+    yt = build("youtube", "v3", credentials=creds)
+    if thumbnail:
+        yt.thumbnails().set(videoId=video_id, media_body=MediaFileUpload(str(thumbnail))).execute()
+    if playlist_id:
+        yt.playlistItems().insert(
+            part="snippet",
+            body={"snippet": {"playlistId": playlist_id,
+                               "resourceId": {"kind": "youtube#video", "videoId": video_id}}},
+        ).execute()

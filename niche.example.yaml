@@ -3,6 +3,8 @@ channel_name: "我的頻道"
 audience: "剛開始接觸這個領域、怕被坑的新手"
 tone: "像朋友聊天,白話,不賣弄術語"
 minutes: 8
+# --upload 時要把片加進哪個播放清單;留空字串就不加。清單 ID 到 YouTube Studio 的播放清單頁網址裡找。
+playlist_id: ""
 seed_topics:
   - "新手最常犯的錯"
   - "某個常見說法到底對不對"
