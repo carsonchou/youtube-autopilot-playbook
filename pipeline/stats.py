@@ -10,24 +10,29 @@ from pathlib import Path
 ANALYTICS_LAG_DAYS = 3  # Analytics 有幾天延遲,今天的數字不可信
 
 
-def rank(published, rows, end_date):
+def rank(published, rows, start_date, end_date):
     """純函式。published:[{video_id, topic, title, published(ISO日期字串)}, ...]
     rows:{video_id: {"minutes":..., "views":...}}。
-    published 晚於 end_date 的片還沒有數據,直接排除;其餘沒在 rows 裡的記 0。
-    依 minutes 由大到小排序。"""
+    published 晚於 end_date 的片還沒有數據,直接排除(end_date 當天算在窗口內,保留);
+    其餘沒在 rows 裡的記 0。依「窗口內平均每天觀看分鐘」(minutes_per_day)由大到小排序,
+    不是累計 minutes、也不是 views —— 片齡不同,累計數字對新片不公平。"""
     result = []
     for p in published:
-        if datetime.date.fromisoformat(p["published"]) > end_date:
+        pub_date = datetime.date.fromisoformat(p["published"])
+        if pub_date > end_date:
             continue
         row = rows.get(p["video_id"], {})
+        minutes = row.get("minutes", 0)
+        live_days = max((end_date - max(start_date, pub_date)).days + 1, 1)
         result.append({
             "video_id": p["video_id"],
             "topic": p["topic"],
             "title": p["title"],
-            "minutes": row.get("minutes", 0),
+            "minutes": minutes,
             "views": row.get("views", 0),
+            "minutes_per_day": minutes / live_days,
         })
-    result.sort(key=lambda r: r["minutes"], reverse=True)
+    result.sort(key=lambda r: r["minutes_per_day"], reverse=True)
     return result
 
 
@@ -45,6 +50,8 @@ def _fetch_rows(video_ids, start_date, end_date):
         metrics="estimatedMinutesWatched,views",
         dimensions="video",
         filters="video==" + ",".join(video_ids),
+        sort="-estimatedMinutesWatched",  # video 維度的報表要靠 sort+maxResults 才拿得到完整資料
+        maxResults=200,
     ).execute()
     rows = {}
     for video_id, minutes, views in resp.get("rows", []):
@@ -65,10 +72,12 @@ def main(argv=None):
     end_date = datetime.date.today() - datetime.timedelta(days=ANALYTICS_LAG_DAYS)
     start_date = end_date - datetime.timedelta(days=a.days)
 
-    video_ids = [p["video_id"] for p in published[-200:]]
+    # 只查最近 200 支,就只對這一批排名 —— 對查詢範圍外的舊片排名,它們會被誤記成 0
+    queried = published[-200:]
+    video_ids = [p["video_id"] for p in queried]
     rows = _fetch_rows(video_ids, start_date, end_date) if video_ids else {}
 
-    result = rank(published, rows, end_date)
+    result = rank(queried, rows, start_date, end_date)
 
     perf_file = out_root / "performance.json"
     tmp = perf_file.with_suffix(".tmp.json")
