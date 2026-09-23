@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>頻道工作室</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%23d4a35a%22/%3E%3Cpath d=%22M12 9l12 7-12 7z%22 fill=%22%231a1409%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0e11;
+  --bg-2: #111419;
+  --surface: #161a20;
+  --surface-2: #1c2129;
+  --line: #262c35;
+  --line-2: #323a45;
+  --text: #ebe7e1;
+  --muted: #8d939c;
+  --faint: #5d636c;
+  --accent: #d4a35a;
+  --accent-soft: rgba(212, 163, 90, .12);
+  --accent-line: rgba(212, 163, 90, .38);
+  --ok: #7fb58c;
+  --warn: #d9a441;
+  --bad: #d77a6e;
+  --radius: 14px;
+  --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --serif: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(212, 163, 90, .07), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(90, 120, 160, .06), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+  font: 15px/1.7 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: .01em;
+}
+a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-line); }
+a:hover { border-color: var(--accent); }
+::selection { background: var(--accent-soft); }
+
+.app { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+
+/* ---------- 側欄 ---------- */
+aside {
+  position: sticky; top: 0; height: 100vh;
+  padding: 36px 28px; border-right: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(22, 26, 32, .65), rgba(12, 14, 17, .4));
+  backdrop-filter: blur(6px);
+  display: flex; flex-direction: column;
+}
+.brand { display: flex; align-items: center; gap: 12px; margin-bottom: 44px; }
+.mark {
+  width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+  background: linear-gradient(135deg, #2a2418, #16130d); border: 1px solid var(--accent-line);
+  color: var(--accent); font: 700 16px var(--serif);
+}
+.brand b { font: 700 17px var(--serif); letter-spacing: .06em; display: block; }
+.brand small { color: var(--faint); font-size: 12px; letter-spacing: .12em; }
+
+.steps { list-style: none; margin: 0; padding: 0; position: relative; }
+.steps::before {
+  content: ""; position: absolute; left: 13px; top: 14px; bottom: 14px; width: 1px; background: var(--line);
+}
+.steps li {
+  position: relative; display: flex; gap: 14px; align-items: flex-start;
+  padding: 10px 0; cursor: pointer; color: var(--muted); transition: color .2s;
+}
+.steps li:hover { color: var(--text); }
+.dot {
+  flex: none; width: 27px; height: 27px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--bg); border: 1px solid var(--line-2); font: 500 12px var(--sans); color: var(--muted);
+  transition: all .25s; z-index: 1;
+}
+.steps li.done .dot { border-color: var(--accent-line); color: var(--accent); }
+.steps li.done .dot::after { content: "✓"; }
+.steps li.done .dot span { display: none; }
+.steps li.active { color: var(--text); }
+.steps li.active .dot { background: var(--accent); border-color: var(--accent); color: #1a1409; font-weight: 700; box-shadow: 0 0 0 5px var(--accent-soft); }
+.steps li.active .dot::after { content: none; }
+.steps li.active .dot span { display: inline; }
+.steps .t { font-weight: 500; font-size: 14.5px; line-height: 27px; }
+.steps .d { font-size: 12.5px; color: var(--faint); line-height: 1.5; }
+aside .foot { margin-top: auto; font-size: 12px; color: var(--faint); line-height: 1.6; }
+
+/* ---------- 主區 ---------- */
+main { padding: 56px 64px 120px; }
+.page { max-width: 780px; margin: 0 auto; display: none; animation: rise .45s cubic-bezier(.2, .7, .2, 1); }
+.page.on { display: block; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.eyebrow { color: var(--accent); font-size: 12px; letter-spacing: .24em; text-transform: uppercase; margin-bottom: 10px; }
+h1 { font: 700 34px/1.3 var(--serif); margin: 0 0 12px; letter-spacing: .02em; }
+h2 { font: 700 19px/1.4 var(--serif); margin: 0 0 6px; }
+.lead { color: var(--muted); font-size: 16px; margin: 0 0 36px; max-width: 620px; }
+
+.card {
+  background: linear-gradient(180deg, var(--surface), var(--bg-2));
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 28px; margin-bottom: 20px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 20px 40px -24px rgba(0, 0, 0, .6);
+}
+.card .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 20px; }
+
+.field { margin-bottom: 22px; }
+.field:last-child { margin-bottom: 0; }
+label.l { display: flex; justify-content: space-between; align-items: baseline; font-weight: 500; font-size: 14px; margin-bottom: 8px; }
+label.l em { font-style: normal; color: var(--faint); font-weight: 400; font-size: 12.5px; }
+.hint { color: var(--faint); font-size: 12.5px; margin-top: 7px; line-height: 1.6; }
+input[type=text], input[type=password], textarea, select {
+  width: 100%; background: var(--bg); color: var(--text);
+  border: 1px solid var(--line-2); border-radius: 10px; padding: 11px 14px;
+  font: inherit; font-size: 14.5px; transition: border-color .2s, box-shadow .2s; outline: none;
+}
+textarea { resize: vertical; min-height: 76px; }
+input::placeholder, textarea::placeholder { color: var(--faint); }
+input:focus, textarea:focus, select:focus { border-color: var(--accent-line); box-shadow: 0 0 0 4px var(--accent-soft); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1px solid var(--line-2); background: transparent; color: var(--muted);
+  padding: 6px 14px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; transition: all .2s;
+}
+.chip:hover { color: var(--text); border-color: var(--faint); }
+.chip.on { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+
+.tags {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; min-height: 50px;
+  background: var(--bg); border: 1px solid var(--line-2); border-radius: 10px; cursor: text;
+}
+.tags:focus-within { border-color: var(--accent-line); box-shadow: 0 0 0 4px var(--accent-soft); }
+.tag { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 8px; padding: 4px 6px 4px 12px; font-size: 13.5px; }
+.tag button { border: 0; background: none; color: var(--faint); cursor: pointer; font-size: 15px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+.tag button:hover { color: var(--bad); background: rgba(215, 122, 110, .1); }
+.tags input { border: 0; background: none; box-shadow: none; flex: 1; min-width: 160px; padding: 5px 6px; }
+.tags input:focus { box-shadow: none; }
+
+/* 預覽卡 */
+.preview { display: flex; gap: 18px; align-items: center; padding: 22px; border-radius: var(--radius); border: 1px dashed var(--line-2); background: rgba(0, 0, 0, .18); }
+.avatar {
+  flex: none; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 30% 25%, #3b3222, #17140e); border: 1px solid var(--accent-line);
+  color: var(--accent); font: 700 26px var(--serif);
+}
+.preview .n { font: 700 18px var(--serif); }
+.preview .th { color: var(--muted); font-size: 13.5px; }
+.preview .au { color: var(--faint); font-size: 12.5px; margin-top: 2px; }
+
+/* 事實表 */
+.facts { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+.facts:has(tbody:empty) thead { display: none; }
+.facts th { text-align: left; color: var(--faint); font-weight: 400; font-size: 12.5px; padding: 0 6px; }
+.facts td { padding: 0 4px; }
+.facts td:last-child { width: 40px; }
+.icon-btn { border: 1px solid var(--line-2); background: none; color: var(--faint); border-radius: 8px; width: 34px; height: 34px; cursor: pointer; font-size: 16px; }
+.icon-btn:hover { color: var(--bad); border-color: rgba(215, 122, 110, .4); }
+
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.range-v { font: 700 22px var(--serif); color: var(--accent); }
+
+/* 選項卡 */
+.opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.opt {
+  border: 1px solid var(--line-2); border-radius: 12px; padding: 14px 16px; cursor: pointer; background: var(--bg);
+  transition: all .2s; text-align: left; color: var(--text); font: inherit;
+}
+.opt:hover { border-color: var(--faint); }
+.opt.on { border-color: var(--accent-line); background: var(--accent-soft); }
+.opt b { display: block; font-weight: 500; }
+.opt span { font-size: 12.5px; color: var(--muted); }
+
+.seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line-2); }
+.seg button { border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; padding: 8px 20px; border-radius: 9px; cursor: pointer; transition: all .2s; }
+.seg button.on { background: var(--surface-2); color: var(--text); box-shadow: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 4px 12px rgba(0, 0, 0, .35); }
+
+/* 檢查清單 */
+.checks { list-style: none; margin: 0; padding: 0; }
+.checks li { display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid var(--line); }
+.checks li:first-child { border-top: 0; padding-top: 0; }
+.st { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; margin-top: 2px; }
+.st.ok { background: rgba(127, 181, 140, .14); color: var(--ok); }
+.st.no { background: rgba(215, 122, 110, .14); color: var(--bad); }
+.st.later { background: rgba(217, 164, 65, .12); color: var(--warn); }
+.checks b { font-weight: 500; }
+.checks p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; }
+
+.badge { font-family: var(--sans); font-weight: 500; vertical-align: middle; margin-left: 6px; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 10px; border-radius: 999px; }
+.badge.ok { color: var(--ok); background: rgba(127, 181, 140, .12); }
+.badge.no { color: var(--muted); background: var(--surface-2); }
+
+.drop {
+  border: 1px dashed var(--line-2); border-radius: 12px; padding: 26px; text-align: center; color: var(--muted);
+  cursor: pointer; transition: all .2s; background: var(--bg);
+}
+.drop:hover, .drop.over { border-color: var(--accent-line); color: var(--text); background: var(--accent-soft); }
+.drop b { color: var(--text); font-weight: 500; }
+
+.guide { margin: 8px 0 0; padding-left: 20px; color: var(--muted); font-size: 13.5px; }
+.guide li { margin: 4px 0; }
+.guide b, .how b, .sub b { color: var(--text); font-weight: 500; }
+
+/* 三個服務一覽 */
+.svc { display: grid; grid-template-columns: 1.1fr 1.2fr 1fr 1.2fr; gap: 16px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+.svc:first-child { border-top: 0; padding-top: 0; }
+.svc:last-child { padding-bottom: 0; }
+.svc b { display: block; color: var(--text); font-weight: 500; font-size: 14.5px; }
+.svc span { color: var(--faint); font-size: 12px; }
+.cost { color: var(--warn); line-height: 1.4; }
+.cost.free { color: var(--ok); }
+.cost small { color: var(--faint); font-size: 11.5px; }
+
+/* 編號教學 */
+.how { list-style: none; counter-reset: how; margin: 4px 0 24px; padding: 0; }
+.how li { counter-increment: how; position: relative; padding: 0 0 12px 38px; color: var(--muted); font-size: 13.5px; line-height: 1.75; }
+.how li::before {
+  content: counter(how); position: absolute; left: 0; top: 1px; width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 12px; color: var(--accent); border: 1px solid var(--accent-line); background: var(--accent-soft);
+}
+details .how { margin-top: 16px; }
+
+.inline { display: flex; gap: 10px; }
+.inline input { flex: 1; min-width: 0; }
+.inline .btn { flex: none; }
+.hint.good { color: var(--ok); }
+.hint.bad { color: var(--bad); }
+
+/* 模型清單 */
+.models { margin-top: 8px; max-height: 264px; overflow: auto; border: 1px solid var(--line-2); border-radius: 10px; background: var(--bg); }
+.model { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 14px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--text); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.model:first-child { border-top: 0; }
+.model:hover { background: var(--surface); }
+.model.on { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.model small { display: block; color: var(--faint); font-family: var(--mono); font-size: 11.5px; }
+.model .p { flex: none; text-align: right; color: var(--muted); font-size: 12.5px; }
+.model .p.free { color: var(--ok); }
+details { margin-top: 14px; }
+summary { cursor: pointer; color: var(--muted); font-size: 13.5px; }
+summary:hover { color: var(--text); }
+
+/* 按鈕 */
+.bar { display: flex; justify-content: space-between; align-items: center; margin-top: 32px; gap: 12px; }
+.btn {
+  border: 1px solid var(--line-2); background: var(--surface); color: var(--text);
+  padding: 11px 22px; border-radius: 11px; font: inherit; font-size: 14.5px; font-weight: 500; cursor: pointer;
+  transition: all .2s; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn:hover:not(:disabled) { border-color: var(--faint); transform: translateY(-1px); }
+.btn.primary { background: linear-gradient(180deg, #ddb06b, #c7954c); border-color: #d9a85e; color: #1a1409; box-shadow: 0 8px 24px -10px rgba(212, 163, 90, .55); }
+.btn.primary:hover:not(:disabled) { box-shadow: 0 12px 28px -10px rgba(212, 163, 90, .7); }
+.btn.ghost { background: none; border-color: transparent; color: var(--muted); }
+.btn.ghost:hover:not(:disabled) { color: var(--text); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.actions .btn { flex-direction: column; align-items: flex-start; gap: 2px; padding: 16px 18px; text-align: left; }
+.actions .btn small { font-weight: 400; font-size: 12px; opacity: .75; }
+.why { color: var(--faint); font-size: 12.5px; margin-top: 10px; min-height: 1em; }
+
+/* 執行 */
+.log {
+  background: #08090b; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+  font: 12.5px/1.75 var(--mono); color: #aeb4bc; max-height: 280px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+}
+.status { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-weight: 500; }
+.spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent-soft); border-top-color: var(--accent); animation: sp 0.9s linear infinite; }
+@keyframes sp { to { transform: rotate(360deg); } }
+video { width: 100%; border-radius: 12px; background: #000; border: 1px solid var(--line); display: block; }
+video.vert { max-width: 340px; margin: 0 auto; }
+.segs { margin: 0; padding-left: 20px; color: var(--muted); font-size: 14px; }
+.segs li { margin: 6px 0; }
+.alert { border: 1px solid rgba(215, 122, 110, .35); background: rgba(215, 122, 110, .07); border-radius: 12px; padding: 16px 18px; }
+.alert h2 { color: var(--bad); font-size: 16px; }
+.alert ul { margin: 8px 0; padding-left: 20px; font-size: 13.5px; color: var(--text); }
+.jobs { list-style: none; margin: 0; padding: 0; }
+.jobs li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.jobs li:first-child { border-top: 0; }
+.jobs .when { margin-right: 12px; color: var(--faint); font-family: var(--mono); font-size: 12px; }
+
+.toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  background: var(--surface-2); border: 1px solid var(--line-2); padding: 11px 20px; border-radius: 12px; font-size: 14px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, .7); transition: all .3s; z-index: 10;
+}
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.toast.err { border-color: rgba(215, 122, 110, .5); color: #f0c2bb; }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  aside, main { min-width: 0; }
+  aside { position: static; height: auto; padding: 20px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .brand { margin-bottom: 16px; }
+  .steps { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .steps::-webkit-scrollbar { display: none; }
+  .steps::before, .steps .d, aside .foot { display: none; }
+  .steps li { padding: 4px 8px 4px 0; }
+  .steps .t { white-space: nowrap; font-size: 13px; }
+  main { padding: 32px 16px 80px; }
+  .row, .opts, .actions { grid-template-columns: 1fr; }
+  .svc { grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+  .inline { flex-direction: column; }
+  h1 { font-size: 27px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="mark">頻</div>
+      <div><b>頻道工作室</b><small>FACELESS STUDIO</small></div>
+    </div>
+    <ol class="steps" id="steps"></ol>
+    <div class="foot">所有設定只存在你的電腦上。<br>關掉終端機視窗即停止。</div>
+  </aside>
+
+  <main>
+    <!-- 0 準備 -->
+    <section class="page" data-step="0">
+      <div class="eyebrow">Step 01 · 準備</div>
+      <h1>打造一個屬於你的頻道</h1>
+      <p class="lead">接下來幾步，你會決定頻道要講什麼、講給誰聽、用什麼語氣。之後每按一次按鈕，AI 就會幫你選題、寫稿、配音、剪成影片。整個過程不需要寫程式。</p>
+      <div class="card">
+        <h2>環境檢查</h2>
+        <p class="sub">紅色的項目要先處理；黃色的晚點再設定也可以。</p>
+        <ul class="checks" id="checks"></ul>
+      </div>
+      <div class="card">
+        <h2>你需要準備什麼？</h2>
+        <p class="sub">看你想做到哪一步：</p>
+        <div class="svc"><div><b>先看看效果</b></div><div>什麼都不用準備</div><div class="cost free">免費</div><div>用第 5 步的「試跑」</div></div>
+        <div class="svc"><div><b>真的做片</b></div><div>一個 OpenRouter 帳號＋信用卡儲值</div><div class="cost">依用量付費</div><div>第 4 步有教學</div></div>
+        <div class="svc"><div><b>自動上傳</b></div><div>你 YouTube 頻道的 Google 帳號</div><div class="cost free">免費</div><div>第 4 步有教學，可跳過</div></div>
+      </div>
+      <div class="bar"><span></span><button class="btn primary" data-next>開始設定 →</button></div>
+    </section>
+
+    <!-- 1 頻道定位 -->
+    <section class="page" data-step="1">
+      <div class="eyebrow">Step 02 · 頻道定位</div>
+      <h1>你的頻道要講什麼？</h1>
+      <p class="lead">主題完全由你決定，不限財經。沒有想法的話，先從下面的範例挑一個改。</p>
+      <div class="card">
+        <label class="l">靈感範例 <em>點一下會填入整套設定</em></label>
+        <div class="chips" id="presets"></div>
+      </div>
+      <div class="card">
+        <div class="field">
+          <label class="l" for="channel_name">頻道名稱</label>
+          <input type="text" id="channel_name" maxlength="100" placeholder="例如：貓奴研究所">
+          <div class="hint">AI 寫稿時會用這個名字自稱（例如開場「歡迎來到貓奴研究所」）。不一定要跟 YouTube 上的頻道名稱一樣，之後隨時可以回來改。</div>
+        </div>
+        <div class="field">
+          <label class="l" for="theme">頻道主題 <em>一句話講這個頻道在做什麼</em></label>
+          <input type="text" id="theme" placeholder="例如：幫第一次養貓的人少走冤枉路">
+          <div class="hint">這是 AI 判斷「什麼題目適合這個頻道」的依據。範圍太大（例如「生活」）AI 會亂跳題；太窄則很快就沒題目可做。一句話講清楚「幫誰解決什麼」最好。</div>
+        </div>
+        <div class="field">
+          <label class="l" for="audience">觀眾是誰</label>
+          <input type="text" id="audience" placeholder="例如：剛領養第一隻貓、什麼都不懂的新手">
+          <div class="hint">寫得越具體，AI 選的題目越貼近真實搜尋。</div>
+        </div>
+        <div class="field">
+          <label class="l">說話語氣</label>
+          <div class="chips" id="tones"></div>
+          <textarea id="tone" style="margin-top:12px" rows="2" placeholder="或自己描述語氣"></textarea>
+          <div class="hint">點上面的選項會把描述填進框裡，你也可以直接改字。AI 寫的每一句旁白都會照這段描述的口吻。</div>
+        </div>
+      </div>
+      <div class="preview">
+        <div class="avatar" id="pv-av">頻</div>
+        <div><div class="n" id="pv-name">頻道名稱</div><div class="th" id="pv-theme">頻道主題</div><div class="au" id="pv-aud"></div></div>
+      </div>
+      <div class="bar"><button class="btn ghost" data-prev>← 上一步</button><button class="btn primary" data-next>下一步 →</button></div>
+    </section>
+
+    <!-- 2 內容方向 -->
+    <section class="page" data-step="2">
+      <div class="eyebrow">Step 03 · 內容方向</div>
+      <h1>給 AI 一些選題方向</h1>
+      <p class="lead">AI 會參考這些方向，想出觀眾會主動搜尋的題目，而且不會重複已經做過的。</p>
+      <div class="card">
+        <div class="field">
+          <label class="l">種子主題 <em>按 Enter 新增</em></label>
+          <div class="tags" id="seeds"><input type="text" id="seed-in" placeholder="例如：新手最常犯的錯"></div>
+          <div class="hint">種子主題是 AI 選題的<b>出發點</b>，不是最終題目。寫你頻道常講的幾類內容，AI 會從這些方向延伸出具體題目。3～5 個就夠。</div>
+        </div>
+        <div class="field">
+          <label class="l">長片長度 <span class="range-v"><span id="min-v">8</span> 分鐘</span></label>
+          <input type="range" id="minutes" min="3" max="20" step="1" value="8">
+          <div class="hint">只影響長片；短片固定約 50 秒。</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>可以引用的數字</h2>
+        <p class="sub">為了防止 AI 編造數據，腳本裡出現的<b>每一個數字</b>都必須先登記在這裡，而且要跟它所屬的主體寫在同一句，否則整支片會被擋下。不打算講數字就全部留空，AI 會被要求全文不寫數字。</p>
+        <table class="facts">
+          <thead><tr><th>主體（誰的數字）</th><th>數值（含單位）</th><th>資料來源</th><th></th></tr></thead>
+          <tbody id="facts"></tbody>
+        </table>
+        <button class="btn ghost" id="add-fact" style="margin-top:6px">＋ 新增一筆</button>
+      </div>
+      <div class="bar"><button class="btn ghost" data-prev>← 上一步</button><button class="btn primary" data-next data-save="niche">儲存並繼續 →</button></div>
+    </section>
+
+    <!-- 3 連接服務 -->
+    <section class="page" data-step="3">
+      <div class="eyebrow">Step 04 · 連接服務</div>
+      <h1>接上 AI 和 YouTube</h1>
+      <p class="lead">做影片要用到三個外部服務。先看懂它們各做什麼，再決定要設定哪幾個。<b>只想先看效果的話，這頁可以全部跳過</b>，下一步按「試跑」就能免費做出一支範例片。</p>
+      <div class="card">
+        <div class="svc">
+          <div><b>AI 寫稿</b><span>OpenRouter</span></div><div>想題目、寫旁白</div><div class="cost">要付費<br><small>先儲值，用多少扣多少</small></div><div>「產片」一定要</div>
+        </div>
+        <div class="svc">
+          <div><b>配音</b><span>微軟語音</span></div><div>把旁白念出來</div><div class="cost free">免費<br><small>不用申請</small></div><div>自動就有</div>
+        </div>
+        <div class="svc">
+          <div><b>自動上傳</b><span>Google</span></div><div>把片傳到你的頻道</div><div class="cost free">免費<br><small>設定約 15 分鐘</small></div><div>可跳過，自己手動上傳</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>① AI 寫稿 · OpenRouter <span class="badge no" id="key-badge">未設定</span></h2>
+        <p class="sub">OpenRouter 是一個「AI 總機」：一個帳號、一次儲值，就能用 OpenAI、Google、Anthropic 等各家的 AI。這個工具靠它來選題和寫腳本。「API 金鑰」就是讓這個工具用你的帳號付費的密碼。</p>
+        <ol class="how">
+          <li><b>註冊</b>：打開 <a href="https://openrouter.ai/" target="_blank" rel="noopener">openrouter.ai</a>，右上角 <b>Sign in</b>，用 Google 帳號登入最快。</li>
+          <li><b>儲值</b>：到 <a href="https://openrouter.ai/settings/credits" target="_blank" rel="noopener">Credits 頁</a> 按 <b>Add Credits</b>，用信用卡儲值。先儲最低金額就夠試很多支片，下面選模型時會顯示每支片大約花多少。</li>
+          <li><b>建立金鑰</b>：到 <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">Keys 頁</a> 按 <b>Create Key</b>，名稱隨便取（例如 youtube）。建好會出現一串 <code>sk-or-</code> 開頭的字，<b>只會顯示這一次</b>，馬上按複製。</li>
+          <li><b>貼到下面</b>，按「測試金鑰」。看到綠色的「金鑰有效」就成功了。</li>
+        </ol>
+        <div class="field">
+          <label class="l" for="key">API 金鑰 <em>只存在你電腦上，不會上傳到任何地方</em></label>
+          <div class="inline"><input type="password" id="key" autocomplete="off" placeholder="sk-or-v1-…"><button class="btn" id="test-key">測試金鑰</button></div>
+          <div class="hint" id="key-msg">已經設定過的話留空即可，舊的不會被清掉。</div>
+        </div>
+        <div class="field">
+          <label class="l" for="model-q">選一個 AI 模型 <em>模型 = 實際幫你寫稿的那個 AI</em></label>
+          <input type="text" id="model-q" placeholder="搜尋，例如 gpt、gemini、claude">
+          <div class="hint">下面先列主要廠商的模型，新的排前面；想找其他模型請用搜尋。價格是粗估。</div>
+          <div class="models" id="models"><div class="hint" style="padding:12px">載入模型清單中…</div></div>
+          <div class="hint" id="model-msg"></div>
+          <details>
+            <summary>不知道選哪個？</summary>
+            <ul class="guide">
+              <li>挑知名廠商（OpenAI、Google、Anthropic）<b>價格中等</b>的模型，中文通常夠好。最便宜的常常中文不順，最貴的對寫旁白來說沒必要。</li>
+              <li>標「免費」的模型可以拿來試，但常常排隊、會被限流，不適合天天產片。</li>
+              <li>選錯也沒關係，隨時回來換，下一支片就用新的。</li>
+            </ul>
+          </details>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>② 配音聲音</h2>
+        <p class="sub">免費的微軟語音，不需要申請或金鑰。挑一個喜歡的就好，之後隨時可以換。</p>
+        <div class="opts" id="voices"></div>
+      </div>
+
+      <div class="card">
+        <h2>③ 自動上傳到 YouTube <span class="badge no" id="cs-badge">未設定</span></h2>
+        <p class="sub">想讓這個工具幫你上傳，要先向 Google 申請一張「通行證」，也就是一個 JSON 檔，讓它能代表你的帳號上傳影片。申請免費，只是步驟多。<b>也可以完全跳過</b>：用「產片」做好後，自己到 YouTube 手動上傳一樣可以。<br>自動上傳的片一律是「私人」，你看過沒問題再自己改成公開。</p>
+        <details id="yt-guide">
+          <summary>一步步教你申請（約 15 分鐘，只要做一次）</summary>
+          <ol class="how">
+            <li><b>建立專案</b>：打開 <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Google Cloud 建立專案</a>，用<b>你頻道的那個 Google 帳號</b>登入。專案名稱隨便取（例如 my-channel），按「建立」。第一次用會先要你同意服務條款。</li>
+            <li><b>開啟 YouTube 功能</b>：確認左上角選的是剛建的專案，在最上面的搜尋列輸入 <code>YouTube Data API v3</code>，點進去按「啟用」。再搜尋 <code>YouTube Analytics API</code>，一樣按「啟用」。</li>
+            <li><b>設定同意畫面</b>：搜尋列輸入 <code>OAuth 同意畫面</code>（或 OAuth consent screen）點進去，按「開始」。應用程式名稱隨便填，電子郵件選你自己；「目標對象」選<b>外部</b>，其他照預設一路按下一步到完成。</li>
+            <li><b>把自己加成測試使用者</b>：在同一區找到「目標對象」（Audience），在「測試使用者」按「新增使用者」，填你頻道的 Gmail，儲存。<b>這步漏掉的話，之後登入會被拒絕。</b></li>
+            <li><b>建立用戶端</b>：到「用戶端」（Clients），或舊版介面的「憑證 → 建立憑證 → OAuth 用戶端 ID」。應用程式類型選 <b>電腦版應用程式</b>（Desktop app），名稱隨便填，按「建立」。</li>
+            <li><b>下載 JSON</b>：建好後按「下載 JSON」，會得到一個 <code>client_secret_….json</code> 檔，拖到下面的框裡。</li>
+            <li><b>第一次上傳時</b>：瀏覽器會跳出 Google 登入頁，選你的頻道帳號。會看到「Google 尚未驗證這個應用程式」，這是正常的，因為這個應用程式就是你自己剛建的：按「繼續」（或「進階 → 前往…」），再勾選允許。</li>
+          </ol>
+          <p class="hint">常見問題：同意畫面是「測試中」狀態時，Google 的授權大約 7 天會過期，到時候上傳會再請你登入一次，照做就好。</p>
+        </details>
+        <div class="drop" id="drop" style="margin-top:16px"><b>把下載的 JSON 檔拖到這裡</b><br><span>或點一下選擇檔案</span></div>
+        <input type="file" id="cs-file" accept=".json,application/json" hidden>
+        <div class="field" style="margin-top:20px">
+          <label class="l" for="playlist_id">播放清單 ID <em>選填，不懂可以留空</em></label>
+          <input type="text" id="playlist_id" placeholder="PL…">
+          <div class="hint">填了的話，上傳的片會自動加進這個播放清單。取得方式：在 YouTube 打開你的播放清單，網址裡 <code>list=</code> 後面那一串（通常 PL 開頭）就是。</div>
+        </div>
+      </div>
+      <div class="bar"><button class="btn ghost" data-prev>← 上一步</button><button class="btn primary" data-next data-save="env">儲存並繼續 →</button></div>
+    </section>
+
+    <!-- 4 產片 -->
+    <section class="page" data-step="4">
+      <div class="eyebrow">Step 05 · 產片</div>
+      <h1>做出第一支影片</h1>
+      <p class="lead">建議先「試跑」一次，確認流程沒問題再正式產片。</p>
+      <div class="card">
+        <h2>三個按鈕差在哪？</h2>
+        <p class="sub">從左到右，一個比一個「真」：</p>
+        <div class="svc"><div><b>試跑</b></div><div>用內建假稿子、假配音走完整個流程，做出一支範例片</div><div class="cost free">免費</div><div>不用任何金鑰，確認電腦環境沒問題</div></div>
+        <div class="svc"><div><b>產片</b></div><div>AI 真的選題、寫稿、配音、剪片，影片存在你的電腦</div><div class="cost">OpenRouter 扣一點錢<small><br>金額見第 4 步模型旁的估價</small></div><div>需要第 4 步的 OpenRouter 金鑰</div></div>
+        <div class="svc"><div><b>產片並上傳</b></div><div>做完直接傳到你的 YouTube 頻道，以「私人影片」上傳，只有你看得到</div><div class="cost">同上<small><br>上傳本身免費</small></div><div>還需要第 4 步的 Google 授權</div></div>
+      </div>
+      <div class="card">
+        <div class="field">
+          <label class="l" for="topic">題目 <em>留空就讓 AI 挑</em></label>
+          <input type="text" id="topic" maxlength="200" placeholder="讓 AI 依你的頻道定位挑一個觀眾會搜尋的題目">
+          <div class="hint">已經想好要講什麼就直接打，例如「貓咪為什麼半夜暴衝」。留空的話，AI 會從你的種子主題延伸出一個題目，也會避開已經做過的。</div>
+        </div>
+        <div class="field">
+          <label class="l">格式</label>
+          <div class="seg" id="fmt"><button data-v="long" class="on">長片 · 橫式</button><button data-v="shorts">短片 · 直式 Shorts</button></div>
+          <div class="hint"><b>長片</b>是一般橫式影片，長度照第 3 步的設定，會自動做縮圖。<b>短片</b>是手機直式的 YouTube Shorts，約 50 秒，標題會自動加上 #Shorts；YouTube 規定 Shorts 不能超過 3 分鐘，超過的話會擋下、不上傳。</div>
+        </div>
+        <div class="actions">
+          <button class="btn" data-run="dry">試跑<small>假資料 · 免費 · 約半分鐘</small></button>
+          <button class="btn" data-run="make">產片<small>真的寫稿配音 · 存在電腦</small></button>
+          <button class="btn primary" data-run="upload">產片並上傳<small>以私人影片上傳</small></button>
+        </div>
+        <div class="why" id="why"></div>
+      </div>
+      <div class="card">
+        <h2>做完之後</h2>
+        <ul class="how" style="margin-bottom:0">
+          <li>畫面會出現影片預覽，檔案存在程式資料夾裡的 <b>output</b> 資料夾，每支片一個子資料夾（裡面有影片、旁白稿、配音）。</li>
+          <li>第一次按「產片並上傳」時，會跳出 Google 登入頁：選你的頻道帳號並按允許。之後就不用再登入（測試模式下大約 7 天要重登一次）。</li>
+          <li>上傳的片是<b>私人影片</b>，不會直接公開。到 <a href="https://studio.youtube.com" target="_blank" rel="noopener">YouTube 工作室</a> →「內容」找到它，先自己看一遍，確認沒問題再把「瀏覽權限」改成公開。</li>
+        </ul>
+      </div>
+      <div class="card" id="run-card" hidden>
+        <div class="status" id="run-status"></div>
+        <div id="result"></div>
+        <details id="log-wrap"><summary>執行紀錄</summary><div class="log" id="log" style="margin-top:12px"></div></details>
+      </div>
+      <div class="card" id="jobs-card" hidden>
+        <h2>最近做過的片</h2>
+        <ul class="jobs" id="jobs"></ul>
+      </div>
+      <div class="bar"><button class="btn ghost" data-prev>← 上一步</button><span></span></div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const STEPS = [
+  ["準備", "檢查環境"],
+  ["頻道定位", "主題、觀眾、語氣"],
+  ["內容方向", "選題方向與數字"],
+  ["連接服務", "AI、配音、YouTube"],
+  ["產片", "做出第一支影片"],
+];
+const TONES = [
+  ["朋友聊天", "像朋友聊天，白話，不賣弄術語"],
+  ["專業分析", "冷靜專業，條理清楚，先講結論再講理由"],
+  ["幽默吐槽", "輕鬆幽默，帶點吐槽，但不嘲笑觀眾"],
+  ["溫柔陪伴", "溫柔有耐心，像身邊的前輩慢慢說給你聽"],
+  ["說故事", "用說故事的方式鋪陳，有懸念、有轉折"],
+];
+const PRESETS = [
+  { label: "新手養貓", channel_name: "貓奴研究所", theme: "幫第一次養貓的人少走冤枉路", audience: "剛領養第一隻貓、什麼都不懂的新手", tone: TONES[3][1],
+    seed_topics: ["新手最常犯的餵食錯誤", "貓咪這個行為代表什麼", "第一次帶貓看醫生要準備什麼"] },
+  { label: "一人料理", channel_name: "一個人也要好好吃", theme: "下班後 20 分鐘內做好一個人的晚餐", audience: "住外面、預算有限、廚藝普通的上班族", tone: TONES[0][1],
+    seed_topics: ["電鍋就能做的料理", "一次備料吃三天", "外食族最容易忽略的營養"] },
+  { label: "歷史冷知識", channel_name: "課本沒教的事", theme: "把歷史課本略過的精彩故事講清楚", audience: "對歷史有興趣、但怕枯燥的學生和上班族", tone: TONES[4][1],
+    seed_topics: ["某個常見說法其實是誤會", "改變歷史的小人物", "歷史人物的真實日常"] },
+  { label: "理財入門", channel_name: "小資理財筆記", theme: "讓完全不懂理財的人踏出第一步", audience: "剛出社會、怕被坑的理財新手", tone: TONES[0][1],
+    seed_topics: ["新手最常犯的錯", "某個常見說法到底對不對", "入門要先搞懂的事"] },
+  { label: "程式自學", channel_name: "零基礎寫程式", theme: "陪非本科系的人自學寫程式", audience: "想轉職或想做小工具、沒有資訊背景的人", tone: TONES[1][1],
+    seed_topics: ["自學最容易卡關的地方", "第一個值得做的小專案", "工具怎麼選"] },
+];
+const VOICES = [
+  ["zh-TW-HsiaoChenNeural", "曉臻", "女聲 · 溫和清晰"],
+  ["zh-TW-HsiaoYuNeural", "曉雨", "女聲 · 明亮輕快"],
+  ["zh-TW-YunJheNeural", "雲哲", "男聲 · 沉穩"],
+];
+
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const h = (tag, attrs = {}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) k === "class" ? el.className = v : k.startsWith("on") ? el.addEventListener(k.slice(2), v) : el.setAttribute(k, v);
+  for (const k of kids) el.append(k);
+  return el;
+};
+
+let S = null, step = 0, seeds = [], voice = VOICES[0][0], fmt = "long", polling = null;
+let models = null, model = "", modelDirty = false;
+const MAJOR = ["openai", "anthropic", "google", "deepseek", "x-ai", "qwen", "mistralai"];
+
+async function api(path, body) {
+  const r = await fetch(path, {
+    method: body === undefined ? "GET" : "POST",
+    headers: { "X-Token": TOKEN, "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "連線失敗（" + r.status + "）");
+  return j;
+}
+function toast(msg, err) {
+  const t = $("#toast");
+  t.textContent = msg; t.className = "toast on" + (err ? " err" : "");
+  clearTimeout(t._t); t._t = setTimeout(() => t.className = "toast" + (err ? " err" : ""), 3200);
+}
+const fileUrl = (job, name) => "/files/" + job + "/" + name + "?t=" + encodeURIComponent(TOKEN);
+
+/* ---------- 步驟 ---------- */
+function renderSteps() {
+  $("#steps").replaceChildren(...STEPS.map(([t, d], i) =>
+    h("li", { class: i === step ? "active" : i < step ? "done" : "", onclick: () => go(i) },
+      h("div", { class: "dot" }, h("span", {}, String(i + 1))),
+      h("div", {}, h("div", { class: "t" }, t), h("div", { class: "d" }, d)))));
+}
+function go(i) {
+  step = Math.max(0, Math.min(STEPS.length - 1, i));
+  $$(".page").forEach(p => p.classList.toggle("on", +p.dataset.step === step));
+  renderSteps();
+  if (step === 4) updateWhy();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* ---------- 環境檢查 ---------- */
+function renderChecks() {
+  const c = S.checks, e = S.env;
+  const items = [
+    ["ok", "Python " + c.python, "已安裝。"],
+    [c.ffmpeg ? "ok" : "no", "ffmpeg", c.ffmpeg ? "已安裝，可以剪片。" :
+      "剪片用的免費工具，還沒安裝。Windows：按開始鍵輸入「終端機」打開，貼上 winget install Gyan.FFmpeg 按 Enter，跑完後關掉黑色視窗、重新雙擊 start.bat。Mac：到 brew.sh 照首頁指示裝好 Homebrew，再在「終端機」輸入 brew install ffmpeg。"],
+    [c.font ? "ok" : "no", "中文字型", c.font ? "找到了。" : "影片字卡要用的中文字型找不到（Windows 和 Mac 通常內建，少見）。請在專案資料夾的 .env 檔加一行 FONT_FILE=字型檔完整路徑。"],
+    [e.OPENROUTER_API_KEY && e.LLM_MODEL ? "ok" : "later", "AI 寫稿金鑰", e.OPENROUTER_API_KEY && e.LLM_MODEL ? "已設定。" : "第 4 步設定；不設也能先試跑。"],
+    [c.client_secrets ? "ok" : "later", "YouTube 上傳", c.client_secrets ? (c.token ? "已授權。" : "已設定，第一次上傳時會請你登入 Google。") : "第 4 步設定；不上傳可以略過。"],
+  ];
+  $("#checks").replaceChildren(...items.map(([st, t, p]) =>
+    h("li", {}, h("div", { class: "st " + st }, st === "ok" ? "✓" : st === "no" ? "!" : "·"),
+      h("div", {}, h("b", {}, t), h("p", {}, p)))));
+}
+
+/* ---------- 頻道定位 ---------- */
+function fillNiche(n) {
+  for (const k of ["channel_name", "theme", "audience", "tone", "playlist_id"]) $("#" + k).value = n[k] || "";
+  $("#minutes").value = n.minutes || 8; $("#min-v").textContent = $("#minutes").value;
+  seeds = [...(n.seed_topics || [])]; renderSeeds();
+  $("#facts").replaceChildren(); (n.facts || []).forEach(addFact);
+  syncTone(); preview();
+}
+function syncTone() { $$("#tones .chip").forEach(c => c.classList.toggle("on", c.dataset.v === $("#tone").value.trim())); }
+function preview() {
+  const name = $("#channel_name").value.trim();
+  $("#pv-name").textContent = name || "頻道名稱";
+  $("#pv-av").textContent = (name || "頻")[0];
+  $("#pv-theme").textContent = $("#theme").value.trim() || "頻道主題";
+  const a = $("#audience").value.trim();
+  $("#pv-aud").textContent = a ? "給 " + a : "";
+}
+
+/* ---------- 內容方向 ---------- */
+function renderSeeds() {
+  $$("#seeds .tag").forEach(t => t.remove());
+  const input = $("#seed-in");
+  seeds.forEach((s, i) => input.before(h("span", { class: "tag" }, s,
+    h("button", { title: "移除", onclick: e => { e.stopPropagation(); seeds.splice(i, 1); renderSeeds(); } }, "×"))));
+}
+function addFact(f = {}) {
+  const cell = (k, ph) => h("td", {}, Object.assign(h("input", { type: "text", "data-k": k, placeholder: ph }), { value: f[k] || "" }));
+  const tr = h("tr", {}, cell("subject", "例如：某某公司"), cell("value", "例如：12.5%"), cell("source", "網址或出處"),
+    h("td", {}, h("button", { class: "icon-btn", title: "刪除", onclick: () => tr.remove() }, "×")));
+  $("#facts").append(tr);
+}
+function collectNiche() {
+  const v = k => $("#" + k).value;
+  const pending = $("#seed-in").value.trim();
+  if (pending && !seeds.includes(pending)) { seeds.push(pending); $("#seed-in").value = ""; renderSeeds(); }
+  return {
+    channel_name: v("channel_name"), theme: v("theme"), audience: v("audience"), tone: v("tone"),
+    minutes: +v("minutes"), playlist_id: v("playlist_id"), seed_topics: seeds,
+    facts: $$("#facts tr").map(tr => Object.fromEntries($$("input", tr).map(i => [i.dataset.k, i.value]))),
+  };
+}
+
+/* ---------- 連接服務 ---------- */
+function renderServices() {
+  const e = S.env;
+  const kb = $("#key-badge"); kb.textContent = e.OPENROUTER_API_KEY ? "✓ 已設定" : "未設定"; kb.className = "badge " + (e.OPENROUTER_API_KEY ? "ok" : "no");
+  const cb = $("#cs-badge"); cb.textContent = S.checks.client_secrets ? "✓ 已設定" : "未設定"; cb.className = "badge " + (S.checks.client_secrets ? "ok" : "no");
+  if (!modelDirty) model = e.LLM_MODEL || "";
+  renderModels();
+  $("#yt-guide").open = !S.checks.client_secrets;
+  voice = e.TTS_VOICE || VOICES[0][0];
+  $("#voices").replaceChildren(...VOICES.map(([id, n, d]) =>
+    h("button", { class: "opt" + (id === voice ? " on" : ""), onclick: ev => { voice = id; $$("#voices .opt").forEach(o => o.classList.toggle("on", o === ev.currentTarget)); } },
+      h("b", {}, n), h("span", {}, d))));
+}
+// 粗估一支長片的 token:選題+寫稿兩次呼叫的輸入約 3000,輸出約每分鐘旁白 400
+const perVideo = m => (3000 * m.in + (+$("#minutes").value * 400 + 500) * m.out) / 1e6;
+const usd = v => v === 0 ? "免費" : v < 0.01 ? "每支 < US$0.01" : "每支約 US$" + v.toFixed(v < 1 ? 2 : 1);
+async function loadModels() {
+  try { models = (await api("/api/models")).models; }
+  catch (e) { models = []; $("#model-msg").textContent = e.message + "。也可以直接貼上模型 ID："; }
+  renderModels();
+}
+function renderModels() {
+  const box = $("#models");
+  if (!models) return;
+  if (!models.length) {
+    box.replaceChildren(Object.assign(h("input", { type: "text", placeholder: "廠商/模型名稱", style: "border:0" }),
+      { value: model, oninput: e => { model = e.target.value.trim(); modelDirty = true; } }));
+    return;
+  }
+  const q = $("#model-q").value.trim().toLowerCase();
+  // 沒搜尋時只列主要廠商(id 的「廠商/」前綴),四百多個一次攤開新手無從選起
+  const list = models.filter(m => q ? (m.name + " " + m.id).toLowerCase().includes(q) : MAJOR.includes(m.id.split("/")[0]) && !/:(?!free$)/.test(m.id));  // :batch 之類的變體只在搜尋時出現
+  const cur = models.find(m => m.id === model);
+  if (cur && !list.includes(cur)) list.unshift(cur);
+  box.replaceChildren(...list.slice(0, 80).map(m => {
+    const c = perVideo(m);
+    return h("button", { class: "model" + (m.id === model ? " on" : ""), onclick: () => { model = m.id; modelDirty = true; renderModels(); } },
+      h("span", {}, m.name, h("small", {}, m.id)), h("span", { class: "p" + (c === 0 ? " free" : "") }, usd(c)));
+  }));
+  if (!list.length) box.replaceChildren(h("div", { class: "hint", style: "padding:12px" }, "找不到符合的模型"));
+  $("#model-msg").textContent = cur ? "已選：" + cur.name + "（價格是依第 3 步影片長度的粗估，實際以 OpenRouter 帳單為準）" : model ? "已選：" + model : "還沒選模型。";
+}
+async function testKey() {
+  const msg = $("#key-msg"), b = $("#test-key");
+  b.disabled = true; msg.className = "hint"; msg.textContent = "測試中…";
+  try {
+    const r = await api("/api/test_key", { key: $("#key").value });
+    msg.className = "hint good";
+    msg.textContent = "✓ 金鑰有效" + (typeof r.usage === "number" ? "，目前已用 US$" + r.usage.toFixed(2) : "") +
+      (r.limit === null || r.limit === undefined ? "" : "，額度上限 US$" + r.limit) + "。記得按下面的「儲存並繼續」。";
+  } catch (e) { msg.className = "hint bad"; msg.textContent = "✗ " + e.message; }
+  finally { b.disabled = false; }
+}
+async function uploadSecrets(file) {
+  try {
+    const data = JSON.parse(await file.text());
+    await api("/api/client_secrets", data);
+    toast("已儲存 YouTube 憑證"); await refresh();
+  } catch (e) { toast(e instanceof SyntaxError ? "這不是 JSON 檔" : e.message, true); }
+}
+
+/* ---------- 儲存 ---------- */
+async function save(kind) {
+  if (kind === "niche") await api("/api/niche", collectNiche());
+  if (kind === "env") {
+    await api("/api/env", { OPENROUTER_API_KEY: $("#key").value, LLM_MODEL: model, TTS_VOICE: voice });
+    modelDirty = false;
+    await api("/api/niche", collectNiche());
+    $("#key").value = "";
+  }
+  await refresh();
+}
+
+/* ---------- 產片 ---------- */
+function updateWhy() {
+  const running = S && S._running;
+  const ready = {
+    dry: S.niche_saved ? "" : "先在第 3 步按「儲存並繼續」。",
+    make: !S.niche_saved ? "先在第 3 步按「儲存並繼續」。" : !(S.env.OPENROUTER_API_KEY && S.env.LLM_MODEL) ? "「產片」要先在第 4 步貼上 OpenRouter 金鑰、選好模型，再按「儲存並繼續」。" : "",
+    upload: !S.niche_saved ? "先在第 3 步按「儲存並繼續」。" : !(S.env.OPENROUTER_API_KEY && S.env.LLM_MODEL) ? "上傳要先在第 4 步貼上 OpenRouter 金鑰、選好模型，再按「儲存並繼續」。" : !S.checks.client_secrets ? "上傳要先在第 4 步完成 YouTube 授權設定（上傳 client_secrets.json）。" : "",
+  };
+  $$("[data-run]").forEach(b => b.disabled = running || !!ready[b.dataset.run]);
+  $("#why").textContent = running ? "正在製作中…" : ready.dry || ready.make || ready.upload;
+}
+async function run(mode) {
+  try {
+    await api("/api/run", { mode, topic: $("#topic").value, shorts: fmt === "shorts" });
+    S._running = true; updateWhy(); poll();
+  } catch (e) { toast(e.message, true); }
+}
+function poll() {
+  clearTimeout(polling);
+  api("/api/job").then(({ job }) => {
+    if (!job) return;
+    $("#run-card").hidden = false;
+    const log = $("#log"); const atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+    log.textContent = job.log.join("\n") || "啟動中…"; if (atEnd) log.scrollTop = log.scrollHeight;
+    const st = $("#run-status");
+    if (job.running) {
+      const label = { dry: "試跑中", make: "產片中", upload: "產片並上傳中" }[job.mode];
+      st.replaceChildren(h("div", { class: "spin" }), label + "… 選題、寫稿、配音、剪片，長片可能要幾分鐘");
+      $("#result").replaceChildren();
+      polling = setTimeout(poll, 1000);
+    } else {
+      S._running = false; updateWhy();
+      renderResult(job);
+      refresh();
+    }
+  }).catch(e => { toast(e.message, true); polling = setTimeout(poll, 3000); });
+}
+function renderResult(job) {
+  const st = $("#run-status"), out = $("#result"), s = job.summary || {};
+  out.replaceChildren();
+  if (job.returncode === 0) {
+    st.replaceChildren(h("span", { class: "st ok" }, "✓"), job.mode === "upload" ? "完成，已以「私人」上傳到 YouTube" : job.mode === "dry" ? "試跑完成（假資料，內容是範例）" : "完成，影片存在電腦裡");
+    if (s.video) {
+      const vid = h("video", { controls: "", src: fileUrl(s.name, "video.mp4"), preload: "metadata" });
+      if (fmt === "shorts") vid.classList.add("vert");
+      out.append(vid);
+    }
+    if (s.title) out.append(h("h2", { style: "margin-top:20px" }, s.title));
+    if (s.description) out.append(h("p", { class: "sub", style: "white-space:pre-wrap" }, s.description));
+    if (s.segments && s.segments.length) out.append(h("ol", { class: "segs" }, ...s.segments.map(t => h("li", {}, t))));
+    if (s.name) out.append(h("p", { class: "hint" }, "檔案位置：output/" + s.name + "/"));
+    $("#log-wrap").open = false;
+  } else {
+    st.replaceChildren(h("span", { class: "st no" }, "!"), "沒有完成");
+    if (s.factguard && s.factguard.length) {
+      out.append(h("div", { class: "alert" },
+        h("h2", {}, "事實閘門擋下了這支片"),
+        h("p", { class: "sub", style: "margin:0" }, "腳本裡出現了沒登記的數字，或數字和它的主體不在同一句。這是在保護你不發出編造的數據。"),
+        h("ul", {}, ...s.factguard.map(t => h("li", {}, t))),
+        h("p", { class: "hint" }, "處理方式：到第 3 步把正確的數字連同主體登記進去；或直接再按一次產片，讓 AI 重寫一版。")));
+    } else {
+      const last = job.log.filter(Boolean).slice(-1)[0] || "";
+      out.append(h("div", { class: "alert" }, h("h2", {}, "發生錯誤"), h("p", { class: "sub", style: "margin:0" }, last)));
+    }
+    $("#log-wrap").open = true;
+  }
+}
+function renderJobs() {
+  const jobs = S.jobs.filter(j => j.video);
+  $("#jobs-card").hidden = !jobs.length;
+  const when = n => n.slice(0, 4) + "/" + n.slice(4, 6) + "/" + n.slice(6, 8) + " " + n.slice(9, 11) + ":" + n.slice(11, 13);
+  $("#jobs").replaceChildren(...jobs.map(j => h("li", {},
+    h("span", {}, j.title || "（無標題）"),
+    h("span", {}, h("span", { class: "when" }, when(j.name)), " ", h("a", { href: fileUrl(j.name, "video.mp4"), target: "_blank", rel: "noopener" }, "播放")))));
+}
+
+/* ---------- 初始化 ---------- */
+async function refresh() {
+  const running = S && S._running;
+  S = await api("/api/state"); S._running = running;
+  renderChecks(); renderServices(); renderJobs(); if (step === 4) updateWhy();
+}
+function bind() {
+  $("#tones").replaceChildren(...TONES.map(([n, v]) => h("button", { class: "chip", "data-v": v, onclick: () => { $("#tone").value = v; syncTone(); } }, n)));
+  $("#presets").replaceChildren(...PRESETS.map(p => h("button", { class: "chip", onclick: () => { fillNiche({ ...collectNiche(), ...p, facts: [] }); toast("已填入「" + p.label + "」，可以再自己改"); } }, p.label)));
+  $("#tone").addEventListener("input", syncTone);
+  ["channel_name", "theme", "audience"].forEach(k => $("#" + k).addEventListener("input", preview));
+  $("#minutes").addEventListener("input", e => $("#min-v").textContent = e.target.value);
+  $("#seeds").addEventListener("click", () => $("#seed-in").focus());
+  $("#seed-in").addEventListener("keydown", e => {
+    const v = e.target.value.trim();
+    if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); if (v && !seeds.includes(v)) { seeds.push(v); renderSeeds(); } e.target.value = ""; }
+    if (e.key === "Backspace" && !e.target.value && seeds.length) { seeds.pop(); renderSeeds(); }
+  });
+  $("#add-fact").addEventListener("click", () => addFact());
+  $("#model-q").addEventListener("input", renderModels);
+  $("#minutes").addEventListener("input", renderModels);
+  $("#test-key").addEventListener("click", testKey);
+  $$("[data-prev]").forEach(b => b.addEventListener("click", () => go(step - 1)));
+  $$("[data-next]").forEach(b => b.addEventListener("click", async () => {
+    try {
+      if (b.dataset.save) { b.disabled = true; await save(b.dataset.save); toast("已儲存"); }
+      go(step + 1);
+    } catch (e) { toast(e.message, true); } finally { b.disabled = false; }
+  }));
+  const drop = $("#drop"), file = $("#cs-file");
+  drop.addEventListener("click", () => file.click());
+  file.addEventListener("change", () => file.files[0] && uploadSecrets(file.files[0]));
+  drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); e.dataTransfer.files[0] && uploadSecrets(e.dataTransfer.files[0]); });
+  $$("#fmt button").forEach(b => b.addEventListener("click", () => { fmt = b.dataset.v; $$("#fmt button").forEach(x => x.classList.toggle("on", x === b)); }));
+  $$("[data-run]").forEach(b => b.addEventListener("click", () => run(b.dataset.run)));
+}
+(async () => {
+  bind();
+  loadModels();
+  try {
+    await refresh();
+    fillNiche(S.niche_saved ? S.niche : { ...S.niche, facts: [] });  // 範例裡的假數字不帶進來
+    const { job } = await api("/api/job");
+    if (job) { S._running = job.running; poll(); }
+    go(S.niche_saved ? 4 : 0);
+  } catch (e) { toast(e.message, true); }
+})();
+</script>
+</body>
+</html>

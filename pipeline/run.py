@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import re
 import time
 from pathlib import Path
 
@@ -64,8 +65,8 @@ def main(argv=None):
     job = out_root / time.strftime("%Y%m%d-%H%M%S")
     job.mkdir()
     s = script.write_script(topic, niche, llm, shorts=a.shorts)
-    if a.shorts and "#shorts" not in s["title"].lower():
-        s["title"] = s["title"][:100 - len(" #Shorts")] + " #Shorts"
+    if a.shorts and not re.search(r"[#＃]shorts\b", s["title"], re.I):  # #shortsvideo 不算
+        s["title"] = s["title"][:100 - len(" #Shorts")].rstrip() + " #Shorts"
     (job / "script.json").write_text(json.dumps(s, ensure_ascii=False, indent=2), encoding="utf-8")
     problems = factguard.check(s, niche.get("facts") or [])
     if problems:
@@ -75,7 +76,7 @@ def main(argv=None):
     video = render.render(s["segments"], tts.synth(s["segments"], job, speak), job, size)
     if a.shorts and render.duration(video) > SHORTS_MAX_SECONDS:
         # 超過上限 YouTube 會當成一般影片,不會進 Shorts
-        raise SystemExit("短片 %.0f 秒,超過 %d 秒上限:%s" % (render.duration(video), SHORTS_MAX_SECONDS, video))
+        raise SystemExit("短片 %.1f 秒,超過 %d 秒上限:%s" % (render.duration(video), SHORTS_MAX_SECONDS, video))
     if not a.dry_run:
         tmp = used_file.with_suffix(".tmp.json")
         tmp.write_text(json.dumps(used + [topic], ensure_ascii=False, indent=2), encoding="utf-8")

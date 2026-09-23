@@ -1,7 +1,13 @@
-PROMPT = """你是 YouTube 頻道「{channel}」的選題編輯。觀眾:{audience}。
+PROMPT = """你是 YouTube 頻道「{channel}」的選題編輯。{theme}觀眾:{audience}。
 參考這些種子主題:{seeds}
 提出一個觀眾會「主動搜尋」的影片題目(像搜尋框裡會打的問題),不要和這些已做過的重複:{used}
 {performance}只輸出題目本身,一行。"""
+
+
+def theme_line(niche):
+    """niche 的 theme(頻道主題)轉成 prompt 裡的一句;沒填就不加。"""
+    theme = str(niche.get("theme") or "").strip()
+    return "頻道主題:%s。" % theme if theme else ""
 
 
 def _performance_block(performance):
@@ -19,6 +25,7 @@ def _performance_block(performance):
 def pick_topic(niche, used, llm, performance=None):
     raw = llm(PROMPT.format(
         channel=niche["channel_name"],
+        theme=theme_line(niche),
         audience=niche["audience"],
         seeds="、".join(niche.get("seed_topics", [])),
         used="、".join(used[-50:]) or "(無)",

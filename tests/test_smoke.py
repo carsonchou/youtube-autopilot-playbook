@@ -182,3 +182,44 @@ def test_too_long_shorts_refused_before_upload(tmp_path, monkeypatch):
     with pytest.raises(SystemExit, match="超過 180 秒"):
         main(["--niche", str(ROOT / "niche.example.yaml"), "--shorts", "--upload", "--out", str(tmp_path)])
     assert uploads == []
+
+
+def _title_llm(title):
+    import pipeline.fakes
+    real = pipeline.fakes.fake_llm
+
+    def llm(p):
+        if "JSON" not in p:
+            return real(p)
+        s = json.loads(real(p))
+        s["title"] = title
+        return json.dumps(s, ensure_ascii=False)
+    return llm
+
+
+@pytest.mark.parametrize("title, expected", [
+    ("貓咪 #shorts", "貓咪 #shorts"),                    # 小寫也算已經有
+    ("貓咪 ＃Shorts", "貓咪 ＃Shorts"),                  # 全形 # 不重複加
+    ("貓咪 #shortsvideo", "貓咪 #shortsvideo #Shorts"),  # 別的 hashtag 不算
+    ("長" * 91 + " " + "尾" * 8, "長" * 91 + " #Shorts"),  # 截斷處的空白不留成兩格
+])
+def test_shorts_hashtag_cases(tmp_path, monkeypatch, title, expected):
+    uploads = []
+    _fake_network(monkeypatch, uploads)
+    monkeypatch.setattr("pipeline.llm.make_llm", lambda: _title_llm(title))
+    main(["--niche", str(ROOT / "niche.example.yaml"), "--shorts", "--upload", "--out", str(tmp_path)])
+    assert uploads[0] == expected
+
+
+def test_too_long_shorts_does_not_burn_topic(tmp_path, monkeypatch):
+    _fake_network(monkeypatch, [])
+    monkeypatch.setattr("pipeline.render.duration", lambda path: 181.0)
+    with pytest.raises(SystemExit):
+        main(["--niche", str(ROOT / "niche.example.yaml"), "--shorts", "--upload", "--out", str(tmp_path)])
+    assert not (tmp_path / "topics_used.json").exists()
+
+
+def test_long_upload_records_format(tmp_path, monkeypatch):
+    _fake_network(monkeypatch, [])
+    main(["--niche", str(ROOT / "niche.example.yaml"), "--upload", "--out", str(tmp_path)])
+    assert json.loads((tmp_path / "published.json").read_text(encoding="utf-8"))[0]["format"] == "long"

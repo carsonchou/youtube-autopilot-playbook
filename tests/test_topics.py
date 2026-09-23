@@ -29,3 +29,15 @@ def test_no_performance_omits_block():
     seen = []
     pick_topic(NICHE, [], lambda p: seen.append(p) or "新題", performance=None)
     assert "表現最好" not in seen[0]
+
+
+def test_theme_goes_into_topic_prompt():
+    prompts = []
+    pick_topic(dict(NICHE, theme="新手養貓"), [], lambda p: prompts.append(p) or "題")
+    assert "頻道主題:新手養貓" in prompts[0]
+
+
+def test_no_theme_no_theme_line():
+    prompts = []
+    pick_topic(NICHE, [], lambda p: prompts.append(p) or "題")
+    assert "頻道主題" not in prompts[0]

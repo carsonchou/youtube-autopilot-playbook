@@ -1,5 +1,8 @@
-# 複製成 niche.yaml 再改。playlist_id 和 facts 的 source 不給 LLM,其餘欄位會寫進選題或腳本的指示。
+# 最簡單的做法:雙擊 start.bat(Windows)或 start.command(macOS),在瀏覽器裡一步步填,不用改這個檔。
+# 想手動改:複製成 niche.yaml 再改。playlist_id 和 facts 的 source 不給 LLM,其餘欄位會寫進選題或腳本的指示。
 channel_name: "我的頻道"
+# 頻道主題:一句話講這個頻道在做什麼,選題和寫腳本都會參考
+theme: "幫新手避開常見的坑"
 audience: "剛開始接觸這個領域、怕被坑的新手"
 tone: "像朋友聊天,白話,不賣弄術語"
 minutes: 8
