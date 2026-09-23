@@ -1,3 +1,4 @@
+import inspect
 import json
 
 # pipeline.upload 刻意不在模組層級 import:test_smoke.py 斷言 dry-run 不會把它拉進
@@ -14,6 +15,17 @@ def _write_token(path, scopes):
         "scopes": scopes,
         "expiry": FUTURE_EXPIRY,
     }), encoding="utf-8")
+
+
+def test_upload_default_privacy_is_private():
+    from pipeline.upload import upload
+    assert inspect.signature(upload).parameters["privacy"].default == "private"
+
+
+def test_scopes_are_exactly_upload_and_analytics_readonly():
+    from pipeline.upload import SCOPES
+    assert SCOPES == ["https://www.googleapis.com/auth/youtube.force-ssl",
+                       "https://www.googleapis.com/auth/yt-analytics.readonly"]
 
 
 def test_needs_reauth_when_token_missing_a_scope(tmp_path):

@@ -48,3 +48,23 @@ def test_published_json_written_before_finish_runs(tmp_path, monkeypatch):
 
     published = json.loads((tmp_path / "published.json").read_text(encoding="utf-8"))
     assert published and published[0]["video_id"] == "FAKEID"
+
+
+def test_run_does_not_request_public_privacy(tmp_path, monkeypatch):
+    """run.py 呼叫 upload() 時不該自己傳 privacy="public",要靠 upload() 的預設值(private)。"""
+    from pipeline.fakes import fake_llm, fake_speak
+
+    calls = []
+
+    def fake_upload(*a, **k):
+        calls.append(k)
+        return "FAKEID"
+
+    monkeypatch.setattr("pipeline.llm.make_llm", lambda: fake_llm)
+    monkeypatch.setattr("pipeline.tts.edge_speak", lambda voice: fake_speak)
+    monkeypatch.setattr("pipeline.upload.upload", fake_upload)
+    monkeypatch.setattr("pipeline.upload.finish", lambda *a, **k: None)
+
+    main(["--niche", str(ROOT / "niche.example.yaml"), "--upload", "--out", str(tmp_path)])
+
+    assert calls and calls[0].get("privacy", "private") == "private"

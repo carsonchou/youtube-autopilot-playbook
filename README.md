@@ -32,6 +32,10 @@
 
 要讓這兩個權限生效,記得先到 Google Cloud 專案啟用 **YouTube Data API v3** 和 **YouTube Analytics API**。
 
+⚠️ YouTube 政策規定,2020-07-28 之後建立的 API 專案如果沒有通過稽核,用這個專案上傳的影片會被鎖成 private,想公開需要先申請 [YouTube API Services 稽核](https://support.google.com/youtube/contact/yt_api_form)。實際規則以 YouTube 官方最新說明為準。
+
+⚠️ `output/published.json` 記的是**上傳日**,不是公開日。如果影片先以 private 上傳,過幾天才手動改成公開,中間那幾天會被算進 `pipeline.stats` 的每日平均分母,把該片的 `minutes_per_day` 拉低。
+
 ## Analytics 回饋選題
 
 `python -m pipeline.stats [--out output] [--days 28]` 會讀 `output/published.json`,呼叫 YouTube Analytics API 抓每支片最近幾天的觀看分鐘,寫成 `output/performance.json`。下次 `pipeline.run` 選題時,如果這個檔案存在,會自動把「過去表現最好/最差的題目」放進選題 prompt 給 LLM 參考。這一步會連網,不要在 `--dry-run` 或不想連外時執行。
