@@ -129,3 +129,8 @@ def test_fullwidth_digits_are_checked():
     facts = [{"subject": "甲公司", "value": "毛利率12.5%"}]
     assert check({"segments": [{"text": "甲公司毛利率是４７．３%"}]}, facts)
     assert check({"segments": [{"text": "甲公司毛利率是１２．５%"}]}, facts) == []
+
+
+def test_empty_subject_does_not_match_every_sentence():
+    facts = [{"subject": "", "value": "12.5%"}]
+    assert check({"segments": [{"text": "乙公司毛利率12.5%"}]}, facts)

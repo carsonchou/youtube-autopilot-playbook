@@ -1,8 +1,10 @@
-"""事實閘門:腳本裡每個阿拉伯數字都必須來自 facts,且那筆 fact 的主體要出現在同一句。
-只查「數字存在」不夠 —— 真實數字掛到別人頭上照樣是編造,單位不同也是編造(12.5% 不能拿來
-背書 12.5 倍)。同句出現另一個已知主體時歸屬有歧義,一樣擋。
+"""事實閘門(粗篩,不是事實查核):腳本裡每個阿拉伯數字都必須能在 facts 找到同一個
+「數字 + 單位首字 + 負號字元」,且那筆 fact 的主體要出現在同一句;同句出現另一個已知主體
+時歸屬有歧義,一樣擋。它只比對字元,不懂語意:漲/跌、衰退/成長、哪個指標、哪一期、多字單位
+(兆美元 vs 兆元)一律看不出來。能擋的是「憑空編的數字」和「數字掛錯主體」;其餘要人工看。
+PLAYBOOK.md §5 列的是已知例子,不是完整清單。
 
-以下是實際判準(完整已知擋不到/會誤判清單見 PLAYBOOK.md §5):
+以下是實際判準:
 
 - 單位:數字後面(可以跳過空白)第一個字元。字串結尾、空白,或這個字元是
   「的、是、在、和、與、及、，、、」這幾個虛字/標點,或是 -、−、－、﹣、–、— 這幾個
@@ -85,7 +87,7 @@ def check(script, facts):
                     problems.append("數字 %s%s 不在 facts:「%s」" % (n, unit, sent))
                     continue
                 owner_subjects = {str(f["subject"]) for f in owners}
-                present_owners = {s for s in owner_subjects if s in sent}
+                present_owners = {s for s in owner_subjects if s.strip() and s in sent}  # 空主體不算提到
                 if not present_owners:
                     who = "、".join(owner_subjects)
                     problems.append("數字 %s%s 屬於 %s,但同一句沒有提到:「%s」" % (n, unit, who, sent))
@@ -95,7 +97,8 @@ def check(script, facts):
                 if other_subjects:
                     problems.append("數字 %s%s 的歸屬有歧義,同一句還出現 %s:「%s」"
                                      % (n, unit, "、".join(other_subjects), sent))
-    # 以下是刻意不處理、發布前要人工看的已知漏洞,完整清單見 PLAYBOOK.md §5:
+    # 以下是刻意不處理、發布前要人工看的已知漏洞(例子見 PLAYBOOK.md §5,不是完整清單):
     # 中文數字抓不到(全形阿拉伯數字會先轉半形,有檢查)、facts 裡沒登記的新主體看不出是另一個主體、主體比對用子字串
-    # (「中鋼」對得上「中鋼構」)、斷句只認「。!?！?」和換行、19xx/20xx 接「年」一律放行。
+    # (「中鋼」對得上「中鋼構」)、斷句只認「。!?！？」和換行、19xx/20xx 接「年」一律放行、
+    # 語意層面(漲/跌、指標、期間、多字單位)完全不查。
     return problems
