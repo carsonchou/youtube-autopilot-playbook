@@ -16,3 +16,13 @@ def test_dry_run_makes_video_without_network(tmp_path):
 def test_dry_run_with_upload_refused(tmp_path):
     with pytest.raises(SystemExit):
         main(["--dry-run", "--upload", "--out", str(tmp_path)])
+
+def test_dry_run_really_does_not_touch_network(tmp_path, monkeypatch):
+    import socket
+
+    def boom(*a, **k):
+        raise AssertionError("dry-run 不該連外")
+    monkeypatch.setattr(socket.socket, "connect", boom)
+    main(["--dry-run", "--niche", str(ROOT / "niche.example.yaml"), "--out", str(tmp_path)])
+    videos = list(tmp_path.glob("*/video.mp4"))
+    assert len(videos) == 1 and videos[0].stat().st_size > 0
