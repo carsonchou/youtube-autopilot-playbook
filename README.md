@@ -86,7 +86,7 @@ python -m pipeline.run --dry-run
 cp niche.example.yaml niche.yaml
 ```
 
-打開 `niche.yaml` 改成你的題材。每個欄位都會被放進給 LLM 的指示裡:
+打開 `niche.yaml` 改成你的題材。除了 `playlist_id`,每個欄位都會被放進給 LLM 的指示裡:
 
 ```yaml
 channel_name: "我的頻道"
@@ -239,7 +239,7 @@ schtasks /create /tn yt-autopilot /sc daily /st 09:00 /tr "cmd /c cd /d D:\path\
 **想跑測試**
 
 ```bash
-pytest
+python -m pytest
 ```
 
 測試全部離線執行,不需要 API key。

@@ -108,15 +108,15 @@ def check(script, facts):
                 if not owners:
                     problems.append("數字 %s%s 不在 facts:「%s」" % (n, unit, sent))
                     continue
-                owner_subjects = {str(f["subject"]) for f in owners}
+                owner_subjects = {_normalize(f["subject"]) for f in owners}
                 present_owners = {s for s in owner_subjects if s.strip() and s in sent}  # 空主體不算提到
                 if not present_owners:
                     who = "、".join(owner_subjects)
                     problems.append("數字 %s%s 屬於 %s,但同一句沒有提到:「%s」" % (n, unit, who, sent))
                     continue
-                other_subjects = {str(f["subject"]) for f in facts
-                                   if str(f["subject"]).strip() and str(f["subject"]) not in owner_subjects
-                                   and str(f["subject"]) in sent}
+                # 主體也要跟腳本一樣先 NFKC,否則全形主體(ＡＢＣ公司)在正規化後的句子裡永遠找不到
+                other_subjects = {s for s in (_normalize(f["subject"]) for f in facts)
+                                   if s.strip() and s not in owner_subjects and s in sent}
                 if other_subjects:
                     problems.append("數字 %s%s 的歸屬有歧義,同一句還出現 %s:「%s」"
                                      % (n, unit, "、".join(other_subjects), sent))

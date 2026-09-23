@@ -201,3 +201,15 @@ def test_blank_subject_fact_does_not_make_every_sentence_ambiguous():
 
 def test_fullwidth_thousands_comma():
     assert check(S("甲公司營收1，200億。"), [{"subject": "甲公司", "value": "1200億"}]) == []
+
+
+def test_fullwidth_subject_still_detected_as_ambiguous():
+    # 主體沒做 NFKC 時,全形主體在正規化後的句子裡找不到,歧義檢查失效
+    facts = FACTS + [{"subject": "ＡＢＣ公司", "value": "30%"}]
+    assert check(S("甲公司和ＡＢＣ公司毛利率是12.5%。"), facts)
+    assert check(S("ＡＢＣ公司毛利率30%。"), facts) == []
+
+
+def test_trailing_comma_is_not_part_of_the_number():
+    # 「12,」的逗號不算數字,單位要看逗號(空白),不是逗號後面的字
+    assert check(S("甲公司排名第12,領先同業。"), [{"subject": "甲公司", "value": "12"}]) == []

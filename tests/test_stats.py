@@ -67,6 +67,8 @@ def test_window_is_exactly_n_days():
     # --days 28 的窗口要剛好是 28 天(含 start 和 end 兩端),不是 29 天
     start, end = _window(28, datetime.date(2026, 9, 23))
     assert (end - start).days + 1 == 28
+    # Analytics 延遲 3 天:end 要往前扣 3 天,今天的數字不可信
+    assert end == datetime.date(2026, 9, 20)
 
 
 def test_main_only_ranks_queried_batch(tmp_path, monkeypatch):

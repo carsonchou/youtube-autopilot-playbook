@@ -1,5 +1,4 @@
-.env
-.env.*
+.env*
 !.env.example
 niche.yaml
 client_secret*.json

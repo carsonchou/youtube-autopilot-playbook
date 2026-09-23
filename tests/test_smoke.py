@@ -68,3 +68,17 @@ def test_run_does_not_request_public_privacy(tmp_path, monkeypatch):
     main(["--niche", str(ROOT / "niche.example.yaml"), "--upload", "--out", str(tmp_path)])
 
     assert calls and calls[0].get("privacy", "private") == "private"
+
+
+def test_thumbnail_is_first_card(tmp_path, monkeypatch):
+    from pipeline.fakes import fake_llm, fake_speak
+
+    got = {}
+    monkeypatch.setattr("pipeline.llm.make_llm", lambda: fake_llm)
+    monkeypatch.setattr("pipeline.tts.edge_speak", lambda voice: fake_speak)
+    monkeypatch.setattr("pipeline.upload.upload", lambda *a, **k: "FAKEID")
+    monkeypatch.setattr("pipeline.upload.finish", lambda *a, **k: got.update(k))
+
+    main(["--niche", str(ROOT / "niche.example.yaml"), "--upload", "--out", str(tmp_path)])
+
+    assert got["thumbnail"].name == "card00.png" and got["thumbnail"].exists()
