@@ -4,17 +4,26 @@ SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl",
           "https://www.googleapis.com/auth/yt-analytics.readonly"]
 
 
+def _needs_reauth(creds):
+    """判斷這組憑證要不要重新走一次授權流程:沒有憑證,或憑證記錄的 scopes
+    不包含 SCOPES 全部(例如舊 token 只有 youtube.upload)。純函式,方便測試。"""
+    return creds is None or not creds.has_scopes(SCOPES)
+
+
 def get_credentials(client_secrets, token_path):
     """回傳有 SCOPES 全部權限的 OAuth 憑證。舊 token 權限不夠(例如只有舊版 youtube.upload)
-    時,不能沿用,要重新走一次授權流程。"""
+    時,不能沿用,要重新走一次授權流程。
+    讀 token 檔時刻意不傳 scopes 給 from_authorized_user_file:一旦傳了,google-auth
+    會直接把 creds.scopes 蓋成傳入值,has_scopes(SCOPES) 就恆為 True,擋不到權限不足的
+    舊 token。不傳的話 creds.scopes 才會取 token 檔裡實際記錄的值。"""
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
     from google_auth_oauthlib.flow import InstalledAppFlow
 
     creds = None
     if Path(token_path).exists():
-        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
-        if not creds.has_scopes(SCOPES):
+        creds = Credentials.from_authorized_user_file(token_path)
+        if _needs_reauth(creds):
             creds = None
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
