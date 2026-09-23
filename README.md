@@ -37,7 +37,8 @@
 1. 裝好 [Python 3.9 以上](https://www.python.org/downloads/)。Windows 安裝時記得勾選 **Add python.exe to PATH**。
 2. 在這個頁面按綠色的 **Code → Download ZIP**,下載後解壓縮。
 3. 打開資料夾,雙擊 **`start.bat`**(Windows)或 **`start.command`**(macOS)。第一次會花一兩分鐘自動安裝需要的套件,接著瀏覽器會自動打開設定精靈。
-   - macOS 如果跳出「無法打開,因為來自未識別的開發者」:改成對檔案按右鍵 → 打開。
+   - macOS 如果跳出「無法打開」之類的安全警告:先按「完成」關掉,到「系統設定 → 隱私權與安全性」,捲到最下面,在提到 `start.command` 的那一行按打開(英文介面是 **Open Anyway**)。舊版 macOS 也可以直接對檔案按右鍵 → 打開。
+   - 如果雙擊後打開的是文字編輯器,或上面的方法都不行:打開「終端機」,輸入 `bash `(後面留一個空白),把 `start.command` 拖進視窗,按 Enter。
 
 ![設定精靈](docs/img/wizard.png)
 

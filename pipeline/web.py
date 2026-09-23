@@ -209,7 +209,7 @@ class Studio:
         updates = {}
         for k in ENV_KEYS:
             v = d.get(k, "")
-            if not isinstance(v, str) or "\n" in v or "\r" in v:
+            if not isinstance(v, str) or not v.isprintable():  # 擋所有換行類字元(含 \x0b、\u2028),免得注入別的 key
                 raise ValueError("%s 格式錯誤" % k)
             updates[k] = v
         write_env(self.root / ".env", updates)
@@ -245,7 +245,7 @@ class Studio:
         key = (key.strip() if isinstance(key, str) else "") or self.env().get("OPENROUTER_API_KEY", "")
         if not key:
             raise ValueError("還沒填金鑰")
-        if "\n" in key or "\r" in key:
+        if not key.isprintable():
             raise ValueError("金鑰格式錯誤")
         info = _get_json(OPENROUTER + "/key", key).get("data") or {}
         return {"ok": True, "usage": info.get("usage"), "limit": info.get("limit"),
@@ -257,14 +257,14 @@ class Studio:
         if mode not in ("dry", "make", "upload"):
             raise ValueError("mode 錯誤")
         topic = d.get("topic") or ""
-        if not isinstance(topic, str) or "\n" in topic or len(topic) > 200:
+        if not isinstance(topic, str) or not topic.isprintable() or len(topic) > 200:
             raise ValueError("題目格式錯誤")
         if not (self.root / "niche.yaml").exists():
             raise ValueError("還沒儲存頻道設定")
         cmd = [sys.executable, "-m", "pipeline.run", "--out", "output"]
         cmd += {"dry": ["--dry-run"], "make": [], "upload": ["--upload"]}[mode]
         if topic.strip():
-            cmd += ["--topic", topic.strip()]
+            cmd += ["--topic=" + topic.strip()]  # 用 = 接,題目以 - 開頭也不會被當成選項
         if d.get("shorts"):
             cmd += ["--shorts"]
         with self.lock:
@@ -373,8 +373,11 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, {"error": "找不到"})
 
     def do_POST(self):
-        n = int(self.headers.get("Content-Length") or 0)
-        if n > MAX_BODY:
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            n = -1
+        if not 0 <= n <= MAX_BODY:
             return self._send(413, {"error": "資料太大"})
         raw = self.rfile.read(n)  # 先讀完再拒絕,否則 Windows 上客戶端會被 reset 而收不到 403
         g = self._guard()

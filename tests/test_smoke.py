@@ -136,6 +136,16 @@ def test_shorts_is_vertical_and_prompts_for_short_script(tmp_path, monkeypatch):
     assert "Shorts" in prompts[-1] and "分鐘的長片" not in prompts[-1]
 
 
+def test_theme_goes_into_script_prompt(tmp_path, monkeypatch):
+    import pipeline.fakes
+
+    prompts = []
+    real = pipeline.fakes.fake_llm
+    monkeypatch.setattr(pipeline.fakes, "fake_llm", lambda p: prompts.append(p) or real(p))
+    main(["--dry-run", "--niche", str(ROOT / "niche.example.yaml"), "--topic", "題", "--out", str(tmp_path)])
+    assert "幫新手避開常見的坑" in prompts[-1]
+
+
 def test_long_video_stays_horizontal_prompt(tmp_path, monkeypatch):
     import pipeline.fakes
 

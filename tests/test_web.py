@@ -75,10 +75,51 @@ def test_env_save_keeps_other_lines_and_empty_means_unchanged(srv):
     assert "LLM_MODEL=m/n" in text and "TTS_VOICE=v" in text
 
 
-def test_env_value_with_newline_refused(srv):
+@pytest.mark.parametrize("sep", ["\n", "\r", "\x0b", "\x0c", "\x85", " ", " "])
+def test_env_value_with_line_break_refused(srv, sep):
+    # splitlines() 會把這些都當換行切開,放行就能注入別的 key(例如把 YT_CLIENT_SECRETS 指到 root 外)
     root = srv.RequestHandlerClass.studio.root
-    code, _ = req(srv, "POST", "/api/env", {"LLM_MODEL": "x\nYT_TOKEN=/etc/passwd"})
+    code, _ = req(srv, "POST", "/api/env", {"LLM_MODEL": "x" + sep + "YT_CLIENT_SECRETS=../pwned.json"})
     assert code == 400 and not (root / ENV).exists()
+
+
+def test_files_need_token(srv):
+    root = srv.RequestHandlerClass.studio.root
+    (root / "output" / "20260101-000000").mkdir(parents=True)
+    (root / "output" / "20260101-000000" / "video.mp4").write_bytes(b"x" * 10)
+    assert req(srv, "GET", "/files/20260101-000000/video.mp4", token=False)[0] == 403
+    assert req(srv, "GET", "/files/20260101-000000/video.mp4?t=" + srv.RequestHandlerClass.studio.token,
+               token=False)[0] == 200
+
+
+@pytest.mark.parametrize("length", ["-1", "abc", str((1 << 20) + 1)])
+def test_bad_content_length_refused(srv, length):
+    port = srv.server_address[1]
+    c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    c.putrequest("POST", "/api/niche", skip_host=True)
+    c.putheader("Host", "127.0.0.1:%d" % port)
+    c.putheader("X-Token", srv.RequestHandlerClass.studio.token)
+    c.putheader("Content-Length", length)
+    c.endheaders()
+    assert c.getresponse().status == 413
+    c.close()
+
+
+def test_topic_starting_with_dash_passed_as_value(srv, monkeypatch):
+    studio = srv.RequestHandlerClass.studio
+    shutil.copy(ROOT / "niche.example.yaml", studio.root / "niche.yaml")
+    import subprocess
+    import sys
+    cmds = []
+    real = subprocess.Popen
+
+    def fake_popen(cmd, **k):
+        cmds.append(cmd)
+        return real([sys.executable, "-c", ""], **k)  # 不真的產片
+    monkeypatch.setattr("pipeline.web.subprocess.Popen", fake_popen)
+    req(srv, "POST", "/api/run", {"mode": "dry", "topic": "-貓咪為什麼暴衝"})
+    assert cmds and "--topic=-貓咪為什麼暴衝" in cmds[0]
+    assert req(srv, "POST", "/api/run", {"mode": "dry", "topic": "貓 咪"})[0] == 400
 
 
 def test_niche_round_trip_and_readable_by_pipeline(srv):
