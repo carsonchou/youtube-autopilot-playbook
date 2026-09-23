@@ -78,6 +78,8 @@ def test_main_only_ranks_queried_batch(tmp_path, monkeypatch):
     main(["--out", str(tmp_path), "--days", "28"])
     perf = json.loads((tmp_path / "performance.json").read_text(encoding="utf-8"))
     assert len(perf) == 200
+    # S5:要的是最新 200 支(published.json 尾端),不是最舊 200 支
+    assert {r["video_id"] for r in perf} == {"v%d" % i for i in range(5, 205)}
 
 
 def test_main_reads_dotenv_like_run(tmp_path, monkeypatch):

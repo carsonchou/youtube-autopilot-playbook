@@ -22,5 +22,5 @@ def synth(segments, out_dir, speak):
             raise RuntimeError("第 %d 段配音是空檔" % i)
         os.replace(tmp, final)
         paths.append(final)
-    # ponytail: 只擋「例外」與「空檔」;不報錯卻截短的配音擋不到,要擋就用 ffprobe 比時長與字數
+    # 只擋「例外」與「空檔」;不報錯卻截短的配音擋不到,要擋就用 ffprobe 比時長與字數
     return paths

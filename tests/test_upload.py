@@ -75,6 +75,9 @@ def test_get_credentials_reauthorizes_insufficient_scope_token(tmp_path, monkeyp
 
     get_credentials("client_secrets.json", str(token_path))
     assert calls, "權限不足的舊 token 應該觸發 InstalledAppFlow 重新授權"
+    # U8:重新授權要一次要齊全部 SCOPES,不能只要其中一個
+    from pipeline.upload import SCOPES
+    assert list(calls[0][1]) == SCOPES
 
 
 def test_get_credentials_reuses_token_with_full_scopes(tmp_path, monkeypatch):
@@ -118,3 +121,23 @@ def test_upload_request_body_is_private(tmp_path, monkeypatch):
     monkeypatch.setattr("googleapiclient.http.MediaFileUpload", lambda *a, **k: None)
     assert up.upload(tmp_path / "v.mp4", "t", "d", "cs.json", "tok.json") == "VID"
     assert bodies[0]["status"]["privacyStatus"] == "private"
+
+
+def test_needs_reauth_when_token_has_only_one_of_the_scopes(tmp_path):
+    # U9:只有 force-ssl、缺 Analytics 的 token 也要重新授權(不能「有任一個就好」)
+    from google.oauth2.credentials import Credentials
+    from pipeline.upload import SCOPES, _needs_reauth
+
+    token_path = tmp_path / "token.json"
+    _write_token(token_path, [SCOPES[0]])
+    assert _needs_reauth(Credentials.from_authorized_user_file(str(token_path))) is True
+
+
+def test_needs_reauth_when_token_has_extra_scopes(tmp_path):
+    # 多出來的權限(例如 Gmail)不能照用,token 外洩時損害會超出這條產線
+    from google.oauth2.credentials import Credentials
+    from pipeline.upload import SCOPES, _needs_reauth
+
+    token_path = tmp_path / "token.json"
+    _write_token(token_path, list(SCOPES) + ["https://www.googleapis.com/auth/gmail.readonly"])
+    assert _needs_reauth(Credentials.from_authorized_user_file(str(token_path))) is True

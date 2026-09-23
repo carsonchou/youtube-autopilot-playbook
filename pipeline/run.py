@@ -62,7 +62,9 @@ def main(argv=None):
         raise SystemExit("事實閘門擋下 %d 處,見 %s" % (len(problems), job / "factguard.txt"))
     video = render.render(s["segments"], tts.synth(s["segments"], job, speak), job)
     if not a.dry_run:
-        used_file.write_text(json.dumps(used + [topic], ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp = used_file.with_suffix(".tmp.json")
+        tmp.write_text(json.dumps(used + [topic], ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp, used_file)  # 寫到一半中斷不會留下半截檔、把去重紀錄整份弄丟
     print("影片:%s" % video)
     if a.upload:
         from .upload import finish, upload

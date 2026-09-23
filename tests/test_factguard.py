@@ -134,3 +134,70 @@ def test_fullwidth_digits_are_checked():
 def test_empty_subject_does_not_match_every_sentence():
     facts = [{"subject": "", "value": "12.5%"}]
     assert check({"segments": [{"text": "乙公司毛利率12.5%"}]}, facts)
+
+
+# ---- 第 5 輪驗證的存活突變與未列放行 ----
+
+import pytest
+
+
+@pytest.mark.parametrize("dash", ["-", "−", "－", "﹣", "–", "—", "‐", "‑", "‒", "⁻"])
+def test_every_dash_kind_is_a_minus_sign(dash):
+    # fact 是正的 12.5%,腳本用任何一種負號/連字號寫成負數都要擋(F10b:拿掉 – — 會放行)
+    assert check(S("甲公司毛利率是%s12.5%%。" % dash), FACTS)
+
+
+def test_minus_with_space_is_still_negative():
+    assert check(S("甲公司毛利率是 - 12.5%。"), FACTS)
+
+
+def test_range_with_spaces_is_not_negative():
+    facts = [{"subject": "甲", "value": "10"}, {"subject": "甲", "value": "12.5%"}]
+    assert check(S("甲的成長率是10 - 12.5%。"), facts) == []
+
+
+def test_parenthesised_number_needs_parenthesised_fact():
+    # (12.5%) 可能是會計寫法的負數,不能拿正的 12.5% 背書
+    assert check(S("甲公司毛利率(12.5%)。"), FACTS)
+    assert check(S("甲公司毛利率(12.5%)。"), [{"subject": "甲公司", "value": "(12.5%)"}]) == []
+
+
+@pytest.mark.parametrize("text", ["甲公司成長⑦倍。", "甲公司毛利率⁹⁹%。", "甲公司毛利率₉₉%。"])
+def test_superscript_and_circled_digits_are_seen(text):
+    assert check(S(text), FACTS)
+
+
+def test_superscript_digits_match_their_plain_fact():
+    assert check(S("甲公司毛利率¹²%。"), [{"subject": "甲公司", "value": "12%"}]) == []
+
+
+def test_description_is_checked():
+    # F18:說明欄也是暴露面
+    s = S("沒有數字。")
+    s["description"] = "暴漲99%"
+    assert check(s, FACTS)
+
+
+@pytest.mark.parametrize("sep", ["。", ". ", "!", "?"])
+def test_subject_in_previous_sentence_does_not_count(sep):
+    # F19:斷句不能只認換行;半形句點也要斷
+    assert check(S("甲公司表現很好%s毛利率是12.5%%。" % sep), FACTS)
+
+
+def test_decimal_point_does_not_split_sentence():
+    assert check(S("甲公司毛利率是12.5%."), FACTS) == []
+
+
+def test_decimal_is_part_of_the_number():
+    # F21:數字正則不含小數時,5.5% 會被拆成 5 和 5%,被 12.5% / 5.9% 的碎片背書
+    facts = [{"subject": "甲公司", "value": "12.5%"}, {"subject": "甲公司", "value": "5.9%"}]
+    assert check(S("甲公司毛利率5.5%。"), facts)
+
+
+def test_blank_subject_fact_does_not_make_every_sentence_ambiguous():
+    facts = FACTS + [{"subject": "", "value": "30%"}]
+    assert check(S("甲公司毛利率是12.5%。"), facts) == []
+
+
+def test_fullwidth_thousands_comma():
+    assert check(S("甲公司營收1，200億。"), [{"subject": "甲公司", "value": "1200億"}]) == []

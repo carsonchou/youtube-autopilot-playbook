@@ -5,9 +5,14 @@ SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl",
 
 
 def _needs_reauth(creds):
-    """判斷這組憑證要不要重新走一次授權流程:沒有憑證,或憑證記錄的 scopes
-    不包含 SCOPES 全部(例如舊 token 只有 youtube.upload)。純函式,方便測試。"""
-    return creds is None or not creds.has_scopes(SCOPES)
+    """判斷這組憑證要不要重新走一次授權流程:沒有憑證、憑證記錄的 scopes 不包含 SCOPES
+    全部(例如舊 token 只有 youtube.upload),或多了 SCOPES 以外的權限(token.json 外洩時
+    損害範圍就不只這條產線)。純函式,方便測試。
+    注意:重新授權只會換掉本機的 token,舊 token 在 Google 那邊仍有效,要到
+    https://myaccount.google.com/permissions 撤銷。"""
+    if creds is None or not creds.has_scopes(SCOPES):
+        return True
+    return bool(set(creds.scopes or []) - set(SCOPES))
 
 
 def get_credentials(client_secrets, token_path):
