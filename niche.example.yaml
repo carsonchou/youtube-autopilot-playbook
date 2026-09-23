@@ -1,0 +1,15 @@
+# 複製成 niche.yaml 再改。這些欄位都是給 LLM 的指示。
+channel_name: "我的頻道"
+audience: "剛開始接觸這個領域、怕被坑的新手"
+tone: "像朋友聊天,白話,不賣弄術語"
+minutes: 8
+seed_topics:
+  - "新手最常犯的錯"
+  - "某個常見說法到底對不對"
+  - "入門要先搞懂的事"
+# 腳本裡允許出現的數字。每筆要寫屬於誰(subject);閘門會檢查「數字和主體在同一句」。
+# 沒列在這裡的阿拉伯數字 → 整支片擋下。
+facts:
+  - subject: "範例主體"
+    value: "12.5%"
+    source: "https://example.com/請填資料來源"
