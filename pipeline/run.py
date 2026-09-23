@@ -8,6 +8,8 @@ import yaml
 
 from . import factguard, render, script, topics, tts
 
+SHORTS_MAX_SECONDS = 180  # YouTube Shorts 上限 3 分鐘(直式或方形)
+
 
 def load_env(path=".env"):
     p = Path(path)
@@ -26,9 +28,13 @@ def main(argv=None):
     ap.add_argument("--dry-run", action="store_true", help="假 LLM/假 TTS,不連任何外部服務")
     ap.add_argument("--upload", action="store_true", help="產完上傳 YouTube(private)")
     ap.add_argument("--out", default="output")
+    ap.add_argument("--topic", help="直接指定題目,跳過 LLM 選題")
+    ap.add_argument("--shorts", action="store_true", help="產直式短片(1080x1920,約 50 秒)")
     a = ap.parse_args(argv)
     if a.dry_run and a.upload:
         ap.error("--dry-run 不能搭 --upload")
+    if a.topic is not None and not a.topic.strip():
+        ap.error("--topic 不能是空字串")
     load_env()
 
     niche_path = Path(a.niche)
@@ -54,16 +60,22 @@ def main(argv=None):
     if not a.dry_run and performance_file.exists():
         performance = json.loads(performance_file.read_text(encoding="utf-8"))
 
-    topic = topics.pick_topic(niche, used, llm, performance=performance)
+    topic = a.topic.strip() if a.topic else topics.pick_topic(niche, used, llm, performance=performance)
     job = out_root / time.strftime("%Y%m%d-%H%M%S")
     job.mkdir()
-    s = script.write_script(topic, niche, llm)
+    s = script.write_script(topic, niche, llm, shorts=a.shorts)
+    if a.shorts and "#shorts" not in s["title"].lower():
+        s["title"] = s["title"][:100 - len(" #Shorts")] + " #Shorts"
     (job / "script.json").write_text(json.dumps(s, ensure_ascii=False, indent=2), encoding="utf-8")
     problems = factguard.check(s, niche.get("facts") or [])
     if problems:
         (job / "factguard.txt").write_text("\n".join(problems), encoding="utf-8")
         raise SystemExit("事實閘門擋下 %d 處,見 %s" % (len(problems), job / "factguard.txt"))
-    video = render.render(s["segments"], tts.synth(s["segments"], job, speak), job)
+    size = render.SHORTS_SIZE if a.shorts else (render.W, render.H)
+    video = render.render(s["segments"], tts.synth(s["segments"], job, speak), job, size)
+    if a.shorts and render.duration(video) > SHORTS_MAX_SECONDS:
+        # 超過上限 YouTube 會當成一般影片,不會進 Shorts
+        raise SystemExit("短片 %.0f 秒,超過 %d 秒上限:%s" % (render.duration(video), SHORTS_MAX_SECONDS, video))
     if not a.dry_run:
         tmp = used_file.with_suffix(".tmp.json")
         tmp.write_text(json.dumps(used + [topic], ensure_ascii=False, indent=2), encoding="utf-8")
@@ -78,13 +90,14 @@ def main(argv=None):
         published_file = out_root / "published.json"
         published = json.loads(published_file.read_text(encoding="utf-8")) if published_file.exists() else []
         published.append({"video_id": vid, "topic": topic, "title": s["title"],
-                           "published": time.strftime("%Y-%m-%d")})
+                           "published": time.strftime("%Y-%m-%d"),
+                           "format": "shorts" if a.shorts else "long"})
         tmp = published_file.with_suffix(".tmp.json")
         tmp.write_text(json.dumps(published, ensure_ascii=False, indent=2), encoding="utf-8")
         os.replace(tmp, published_file)
         print("已上傳(private):https://youtu.be/%s" % vid)
         finish(vid, client_secrets, token_path,
-               thumbnail=job / "card00.png",
+               thumbnail=None if a.shorts else job / "card00.png",  # 短片不設自訂縮圖
                playlist_id=niche.get("playlist_id") or None)
 
 

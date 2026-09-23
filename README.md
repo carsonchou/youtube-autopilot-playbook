@@ -140,6 +140,30 @@ output/
 
 **發布前一定要把 `script.json` 和影片從頭到尾看過一遍。** 事實閘門只會檢查數字,內容說得對不對,它判斷不了。
 
+#### 指定題目、改做短片
+
+預設是 LLM 從 `seed_topics` 挑題目、產橫式長片。兩個選項可以改掉,也可以一起用:
+
+| 選項 | 效果 |
+|---|---|
+| `--topic "題目"` | 直接用你給的題目,不讓 LLM 選 |
+| `--shorts` | 改產直式短片:1080×1920、字卡字體放大、腳本約 50 秒 |
+
+```bash
+python -m pipeline.run --topic "定存跟ETF哪個適合新手"            # 指定題目的長片
+python -m pipeline.run --shorts                                   # LLM 選題的短片
+python -m pipeline.run --topic "定存跟ETF哪個適合新手" --shorts    # 兩個一起
+```
+
+短片的幾個差別:
+
+- 產完會量片長,超過 180 秒就停下不上傳(超過 3 分鐘 YouTube 不會把它當 Shorts)。
+- 上傳時標題自動加 ` #Shorts`,太長會先截短,總長不超過 100 字。
+- 不設自訂縮圖。
+- `published.json` 那筆會記 `"format": "shorts"`。注意:步驟 8 的排名目前長片和短片混在一起算,短片的觀看分鐘天生比長片少,混著排會把短片的題目壓到後面。
+
+不同系列想用不同設定,可以準備多份設定檔,用 `--niche 另一份.yaml` 切換。
+
 ### 步驟 6:設定 YouTube 上傳(只需要做一次)
 
 1. 到 [Google Cloud Console](https://console.cloud.google.com/) 建立一個專案。

@@ -5,6 +5,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 W, H = 1920, 1080
+SHORTS_SIZE = (1080, 1920)  # 直式
 FONT_CANDIDATES = [
     "C:/Windows/Fonts/msjh.ttc",
     "/System/Library/Fonts/PingFang.ttc",
@@ -30,14 +31,15 @@ def wrap(text, font, max_w):
     return lines + [cur] if cur else lines
 
 
-def make_card(text, path, font):
-    img = Image.new("RGB", (W, H), (18, 18, 24))
+def make_card(text, path, font, size=(W, H)):
+    w, h = size
+    img = Image.new("RGB", size, (18, 18, 24))
     draw = ImageDraw.Draw(img)
-    lines = wrap(text, font, W - 240)
+    lines = wrap(text, font, w - 240)
     lh = int(font.size * 1.5)
-    y = (H - lh * len(lines)) // 2
+    y = (h - lh * len(lines)) // 2
     for line in lines:
-        draw.text(((W - font.getlength(line)) // 2, y), line, font=font, fill=(235, 235, 235))
+        draw.text(((w - font.getlength(line)) // 2, y), line, font=font, fill=(235, 235, 235))
         y += lh
     img.save(path)
 
@@ -46,13 +48,13 @@ def _ff(*args):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error"] + [str(a) for a in args], check=True)
 
 
-def render(segments, audio_paths, out_dir):
+def render(segments, audio_paths, out_dir, size=(W, H)):
     out_dir = Path(out_dir)
-    font = load_font()
+    font = load_font(80 if size[0] < size[1] else 64)  # 直式畫面小,字放大
     parts = []
     for i, (seg, audio) in enumerate(zip(segments, audio_paths)):
         card, part = out_dir / ("card%02d.png" % i), out_dir / ("part%02d.mp4" % i)
-        make_card(seg["text"], card, font)
+        make_card(seg["text"], card, font, size)
         _ff("-loop", "1", "-i", card, "-i", audio, "-c:v", "libx264", "-tune", "stillimage",
             "-r", "30", "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "44100", "-shortest", part)
         parts.append(part)
@@ -62,3 +64,11 @@ def render(segments, audio_paths, out_dir):
     _ff("-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", tmp)
     os.replace(tmp, final)
     return final
+
+
+def duration(path):
+    """影片秒數(ffprobe)。"""
+    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                          "-of", "default=nw=1:nk=1", str(path)],
+                         check=True, capture_output=True, text=True).stdout
+    return float(out.strip())

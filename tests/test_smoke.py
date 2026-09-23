@@ -90,3 +90,95 @@ def test_fact_missing_subject_is_rejected_with_message(tmp_path):
                      .replace('subject: "範例主體"', 'name: "範例主體"'), encoding="utf-8")
     with pytest.raises(SystemExit, match="第 1 筆缺少 subject"):
         main(["--dry-run", "--niche", str(niche), "--out", str(tmp_path)])
+
+
+def _fake_network(monkeypatch, uploads):
+    from pipeline.fakes import fake_llm, fake_speak
+
+    monkeypatch.setattr("pipeline.llm.make_llm", lambda: fake_llm)
+    monkeypatch.setattr("pipeline.tts.edge_speak", lambda voice: fake_speak)
+    monkeypatch.setattr("pipeline.upload.upload",
+                        lambda video, title, *a, **k: uploads.append(title) or "FAKEID")
+    monkeypatch.setattr("pipeline.upload.finish", lambda *a, **k: uploads.append(k))
+
+
+def test_topic_flag_skips_llm_topic_pick(tmp_path, monkeypatch):
+    import pipeline.fakes
+
+    prompts = []
+    real = pipeline.fakes.fake_llm
+    monkeypatch.setattr(pipeline.fakes, "fake_llm", lambda p: prompts.append(p) or real(p))
+    main(["--dry-run", "--topic", "定存跟ETF哪個適合新手", "--out", str(tmp_path)])
+    assert len(prompts) == 1  # 只剩寫腳本那一次,沒有選題
+    assert "定存跟ETF哪個適合新手" in prompts[0]
+
+
+def test_empty_topic_refused(tmp_path):
+    with pytest.raises(SystemExit):
+        main(["--dry-run", "--topic", "  ", "--out", str(tmp_path)])
+
+
+def test_shorts_is_vertical_and_prompts_for_short_script(tmp_path, monkeypatch):
+    import subprocess
+    import pipeline.fakes
+
+    prompts = []
+    real = pipeline.fakes.fake_llm
+    monkeypatch.setattr(pipeline.fakes, "fake_llm", lambda p: prompts.append(p) or real(p))
+    main(["--dry-run", "--shorts", "--out", str(tmp_path)])
+    video = next(tmp_path.glob("*/video.mp4"))
+    wh = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                         "stream=width,height", "-of", "csv=p=0", str(video)],
+                        capture_output=True, text=True, check=True).stdout.strip()
+    assert wh == "1080,1920"
+    from pipeline.render import duration
+    assert 2 < duration(video) < 5  # 假配音 1 秒 x 3 段
+    assert "Shorts" in prompts[-1] and "分鐘的長片" not in prompts[-1]
+
+
+def test_long_video_stays_horizontal_prompt(tmp_path, monkeypatch):
+    import pipeline.fakes
+
+    prompts = []
+    real = pipeline.fakes.fake_llm
+    monkeypatch.setattr(pipeline.fakes, "fake_llm", lambda p: prompts.append(p) or real(p))
+    main(["--dry-run", "--out", str(tmp_path)])
+    assert "分鐘的長片" in prompts[-1] and "Shorts" not in prompts[-1]
+
+
+def test_shorts_upload_adds_hashtag_and_skips_thumbnail(tmp_path, monkeypatch):
+    uploads = []
+    _fake_network(monkeypatch, uploads)
+    main(["--niche", str(ROOT / "niche.example.yaml"), "--shorts", "--upload", "--out", str(tmp_path)])
+    title, finish_kwargs = uploads
+    assert title.endswith(" #Shorts") and len(title) <= 100
+    assert finish_kwargs["thumbnail"] is None
+    published = json.loads((tmp_path / "published.json").read_text(encoding="utf-8"))
+    assert published[0]["format"] == "shorts"
+
+
+def test_shorts_title_truncated_to_fit_hashtag(tmp_path, monkeypatch):
+    import pipeline.fakes
+
+    real = pipeline.fakes.fake_llm
+
+    def long_title_llm(p):
+        s = json.loads(real(p)) if "JSON" in p else None
+        if s is None:
+            return real(p)
+        s["title"] = "長" * 100
+        return json.dumps(s, ensure_ascii=False)
+    uploads = []
+    _fake_network(monkeypatch, uploads)
+    monkeypatch.setattr("pipeline.llm.make_llm", lambda: long_title_llm)
+    main(["--niche", str(ROOT / "niche.example.yaml"), "--shorts", "--upload", "--out", str(tmp_path)])
+    assert len(uploads[0]) == 100 and uploads[0].endswith(" #Shorts")
+
+
+def test_too_long_shorts_refused_before_upload(tmp_path, monkeypatch):
+    uploads = []
+    _fake_network(monkeypatch, uploads)
+    monkeypatch.setattr("pipeline.render.duration", lambda path: 181.0)
+    with pytest.raises(SystemExit, match="超過 180 秒"):
+        main(["--niche", str(ROOT / "niche.example.yaml"), "--shorts", "--upload", "--out", str(tmp_path)])
+    assert uploads == []
