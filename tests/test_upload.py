@@ -93,3 +93,28 @@ def test_get_credentials_reuses_token_with_full_scopes(tmp_path, monkeypatch):
 
     creds = get_credentials("client_secrets.json", str(token_path))
     assert creds.has_scopes(SCOPES)
+
+
+def test_upload_request_body_is_private(tmp_path, monkeypatch):
+    """不只看預設參數,要看真正送給 API 的 body。"""
+    from pipeline import upload as up
+    bodies = []
+
+    class Req:
+        def next_chunk(self):
+            return None, {"id": "VID"}
+
+    class Videos:
+        def insert(self, **kw):
+            bodies.append(kw["body"])
+            return Req()
+
+    class YT:
+        def videos(self):
+            return Videos()
+
+    monkeypatch.setattr(up, "get_credentials", lambda *a: None)
+    monkeypatch.setattr("googleapiclient.discovery.build", lambda *a, **k: YT())
+    monkeypatch.setattr("googleapiclient.http.MediaFileUpload", lambda *a, **k: None)
+    assert up.upload(tmp_path / "v.mp4", "t", "d", "cs.json", "tok.json") == "VID"
+    assert bodies[0]["status"]["privacyStatus"] == "private"

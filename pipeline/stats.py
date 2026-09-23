@@ -72,6 +72,11 @@ def main(argv=None):
     ap.add_argument("--out", default="output")
     ap.add_argument("--days", type=int, default=28)
     a = ap.parse_args(argv)
+    if a.days < 1:
+        ap.error("--days 至少要 1")
+
+    from .run import load_env
+    load_env()  # 跟 pipeline.run 用同一份 .env,否則 YT_TOKEN 設在 .env 會被忽略、查到別的帳號
 
     out_root = Path(a.out)
     published_file = out_root / "published.json"

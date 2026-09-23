@@ -78,3 +78,29 @@ def test_main_only_ranks_queried_batch(tmp_path, monkeypatch):
     main(["--out", str(tmp_path), "--days", "28"])
     perf = json.loads((tmp_path / "performance.json").read_text(encoding="utf-8"))
     assert len(perf) == 200
+
+
+def test_main_reads_dotenv_like_run(tmp_path, monkeypatch):
+    """YT_TOKEN 設在 .env 時,stats 要跟 run 用同一份設定,不能悄悄退回 token.json。"""
+    import pytest
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("YT_TOKEN", raising=False)
+    (tmp_path / ".env").write_text("YT_TOKEN=my_token.json\n", encoding="utf-8")
+    (tmp_path / "published.json").write_text(json.dumps(
+        [{"video_id": "a", "topic": "t", "title": "t", "published": "2026-01-01"}]), encoding="utf-8")
+    seen = []
+
+    def fake_creds(client_secrets, token_path):
+        seen.append(token_path)
+        raise RuntimeError("stop")
+
+    monkeypatch.setattr("pipeline.upload.get_credentials", fake_creds)
+    with pytest.raises(RuntimeError):
+        main(["--out", str(tmp_path)])
+    assert seen == ["my_token.json"]
+
+
+def test_days_must_be_positive(tmp_path):
+    import pytest
+    with pytest.raises(SystemExit):
+        main(["--out", str(tmp_path), "--days", "0"])

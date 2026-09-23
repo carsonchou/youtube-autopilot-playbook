@@ -56,8 +56,8 @@ def test_run_does_not_request_public_privacy(tmp_path, monkeypatch):
 
     calls = []
 
-    def fake_upload(*a, **k):
-        calls.append(k)
+    def fake_upload(video, title, description, client_secrets, token_path, privacy="private"):
+        calls.append({"privacy": privacy})  # 位置參數或關鍵字傳進來都抓得到
         return "FAKEID"
 
     monkeypatch.setattr("pipeline.llm.make_llm", lambda: fake_llm)
