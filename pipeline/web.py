@@ -130,6 +130,11 @@ def clean_niche(d):
     }
 
 
+def _has_break(s):
+    # 只擋 splitlines() 會切開的字元;全形空白、tab、emoji 照常可用
+    return "".join(s.splitlines()) != s
+
+
 class Studio:
     """精靈的狀態:工作目錄、token、目前這一個產片工作。"""
 
@@ -209,7 +214,7 @@ class Studio:
         updates = {}
         for k in ENV_KEYS:
             v = d.get(k, "")
-            if not isinstance(v, str) or not v.isprintable():  # 擋所有換行類字元(含 \x0b、\u2028),免得注入別的 key
+            if not isinstance(v, str) or _has_break(v):  # 擋所有換行類字元(含 \x0b、\u2028),免得注入別的 key
                 raise ValueError("%s 格式錯誤" % k)
             updates[k] = v
         write_env(self.root / ".env", updates)
@@ -245,7 +250,7 @@ class Studio:
         key = (key.strip() if isinstance(key, str) else "") or self.env().get("OPENROUTER_API_KEY", "")
         if not key:
             raise ValueError("還沒填金鑰")
-        if not key.isprintable():
+        if _has_break(key):
             raise ValueError("金鑰格式錯誤")
         info = _get_json(OPENROUTER + "/key", key).get("data") or {}
         return {"ok": True, "usage": info.get("usage"), "limit": info.get("limit"),
@@ -257,7 +262,7 @@ class Studio:
         if mode not in ("dry", "make", "upload"):
             raise ValueError("mode 錯誤")
         topic = d.get("topic") or ""
-        if not isinstance(topic, str) or not topic.isprintable() or len(topic) > 200:
+        if not isinstance(topic, str) or _has_break(topic) or len(topic) > 200:
             raise ValueError("題目格式錯誤")
         if not (self.root / "niche.yaml").exists():
             raise ValueError("還沒儲存頻道設定")

@@ -75,7 +75,7 @@ def test_env_save_keeps_other_lines_and_empty_means_unchanged(srv):
     assert "LLM_MODEL=m/n" in text and "TTS_VOICE=v" in text
 
 
-@pytest.mark.parametrize("sep", ["\n", "\r", "\x0b", "\x0c", "\x85", " ", " "])
+@pytest.mark.parametrize("sep", ["\n", "\r", "\x0b", "\x0c", "\x1c", "\x85", "\u2028", "\u2029"])
 def test_env_value_with_line_break_refused(srv, sep):
     # splitlines() 會把這些都當換行切開,放行就能注入別的 key(例如把 YT_CLIENT_SECRETS 指到 root 外)
     root = srv.RequestHandlerClass.studio.root
@@ -119,7 +119,20 @@ def test_topic_starting_with_dash_passed_as_value(srv, monkeypatch):
     monkeypatch.setattr("pipeline.web.subprocess.Popen", fake_popen)
     req(srv, "POST", "/api/run", {"mode": "dry", "topic": "-貓咪為什麼暴衝"})
     assert cmds and "--topic=-貓咪為什麼暴衝" in cmds[0]
-    assert req(srv, "POST", "/api/run", {"mode": "dry", "topic": "貓 咪"})[0] == 400
+    assert req(srv, "POST", "/api/run", {"mode": "dry", "topic": "貓\u2028咪"})[0] == 400
+
+
+@pytest.mark.parametrize("topic", ["貓咪\u3000為什麼暴衝", "👨\u200d👩\u200d👧 一家人養貓", "貓\t咪"])
+def test_topic_with_fullwidth_space_or_emoji_accepted(srv, monkeypatch, topic):
+    # 中文輸入法常打出全形空白,不能被當成換行擋掉
+    studio = srv.RequestHandlerClass.studio
+    shutil.copy(ROOT / "niche.example.yaml", studio.root / "niche.yaml")
+    import subprocess
+    import sys
+    real = subprocess.Popen
+    monkeypatch.setattr("pipeline.web.subprocess.Popen",
+                        lambda cmd, **k: real([sys.executable, "-c", ""], **k))
+    assert req(srv, "POST", "/api/run", {"mode": "dry", "topic": topic})[0] == 200
 
 
 def test_niche_round_trip_and_readable_by_pipeline(srv):
