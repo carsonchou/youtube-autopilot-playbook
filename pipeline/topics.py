@@ -9,10 +9,10 @@ def _performance_block(performance):
     if not performance:
         return ""
     best = performance[:5]
-    lines = ["過去表現最好的題目(依觀看分鐘):" + "、".join(p["topic"] for p in best)]
+    lines = ["過去表現最好的題目(依平均每日觀看分鐘):" + "、".join(p["topic"] for p in best)]
     worst = performance[5:][-5:]
     if worst:
-        lines.append("過去表現最差的題目(依觀看分鐘):" + "、".join(p["topic"] for p in worst))
+        lines.append("過去表現最差的題目(依平均每日觀看分鐘):" + "、".join(p["topic"] for p in worst))
     return "\n".join(lines) + "\n"
 
 

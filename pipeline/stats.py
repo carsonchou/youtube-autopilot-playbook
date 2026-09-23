@@ -36,6 +36,14 @@ def rank(published, rows, start_date, end_date):
     return result
 
 
+def _window(days, today):
+    """回傳 (start_date, end_date):end_date 扣掉 Analytics 延遲,start_date 讓窗口剛好是
+    days 天(含頭尾兩端,所以是 -(days-1)不是 -days)。"""
+    end_date = today - datetime.timedelta(days=ANALYTICS_LAG_DAYS)
+    start_date = end_date - datetime.timedelta(days=days - 1)
+    return start_date, end_date
+
+
 def _fetch_rows(video_ids, start_date, end_date):
     from googleapiclient.discovery import build
 
@@ -69,8 +77,7 @@ def main(argv=None):
     published_file = out_root / "published.json"
     published = json.loads(published_file.read_text(encoding="utf-8")) if published_file.exists() else []
 
-    end_date = datetime.date.today() - datetime.timedelta(days=ANALYTICS_LAG_DAYS)
-    start_date = end_date - datetime.timedelta(days=a.days)
+    start_date, end_date = _window(a.days, datetime.date.today())
 
     # 只查最近 200 支,就只對這一批排名 —— 對查詢範圍外的舊片排名,它們會被誤記成 0
     queried = published[-200:]

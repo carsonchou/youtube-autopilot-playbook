@@ -23,6 +23,7 @@ def test_performance_added_to_prompt():
     pick_topic(NICHE, [], lambda p: seen.append(p) or "新題", performance=performance)
     assert "topic0" in seen[0] and "topic4" in seen[0]  # 前 5 名
     assert "topic5" in seen[0] and "topic6" in seen[0]  # 表現最差(performance[5:][-5:])
+    assert "依平均每日觀看分鐘" in seen[0]  # 措辭要講清楚是平均每日,不是累計
 
 def test_no_performance_omits_block():
     seen = []

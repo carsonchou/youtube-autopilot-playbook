@@ -1,6 +1,7 @@
 import datetime
+import json
 
-from pipeline.stats import rank
+from pipeline.stats import _window, main, rank
 
 START = datetime.date(2026, 9, 1)
 END = datetime.date(2026, 9, 10)
@@ -60,3 +61,20 @@ def test_published_before_start_date_clamped_to_start():
     result = rank(published, rows, START, END)
     # (END - START).days + 1 == 10
     assert result[0]["minutes_per_day"] == 3.0
+
+
+def test_window_is_exactly_n_days():
+    # --days 28 的窗口要剛好是 28 天(含 start 和 end 兩端),不是 29 天
+    start, end = _window(28, datetime.date(2026, 9, 23))
+    assert (end - start).days + 1 == 28
+
+
+def test_main_only_ranks_queried_batch(tmp_path, monkeypatch):
+    # 只查最近 200 支,performance.json 也只該有這 200 支的排名
+    published = [{"video_id": "v%d" % i, "topic": "t%d" % i, "title": "t",
+                  "published": "2026-01-01"} for i in range(205)]
+    (tmp_path / "published.json").write_text(json.dumps(published), encoding="utf-8")
+    monkeypatch.setattr("pipeline.stats._fetch_rows", lambda ids, s, e: {})
+    main(["--out", str(tmp_path), "--days", "28"])
+    perf = json.loads((tmp_path / "performance.json").read_text(encoding="utf-8"))
+    assert len(perf) == 200
