@@ -35,6 +35,9 @@ def main(argv=None):
     if a.dry_run and not niche_path.exists():
         niche_path = Path("niche.example.yaml")
     niche = yaml.safe_load(niche_path.read_text(encoding="utf-8"))
+    for i, f in enumerate(niche.get("facts") or []):
+        if not isinstance(f, dict) or "subject" not in f or "value" not in f:
+            raise SystemExit("%s 的 facts 第 %d 筆缺少 subject 或 value" % (niche_path, i + 1))
     if a.dry_run:
         from .fakes import fake_llm as llm, fake_speak as speak
     else:

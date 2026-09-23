@@ -86,7 +86,7 @@ python -m pipeline.run --dry-run
 cp niche.example.yaml niche.yaml
 ```
 
-打開 `niche.yaml` 改成你的題材。除了 `playlist_id`,每個欄位都會被放進給 LLM 的指示裡:
+打開 `niche.yaml` 改成你的題材。`channel_name`、`audience`、`tone`、`minutes` 和 facts 的 `subject`/`value` 會寫進給 LLM 的腳本指示;`seed_topics` 用在選題;`playlist_id` 和 facts 的 `source` 不給 LLM(`source` 是給你自己查證用的):
 
 ```yaml
 channel_name: "我的頻道"

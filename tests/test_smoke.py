@@ -82,3 +82,11 @@ def test_thumbnail_is_first_card(tmp_path, monkeypatch):
     main(["--niche", str(ROOT / "niche.example.yaml"), "--upload", "--out", str(tmp_path)])
 
     assert got["thumbnail"].name == "card00.png" and got["thumbnail"].exists()
+
+
+def test_fact_missing_subject_is_rejected_with_message(tmp_path):
+    niche = tmp_path / "niche.yaml"
+    niche.write_text((ROOT / "niche.example.yaml").read_text(encoding="utf-8")
+                     .replace('subject: "範例主體"', 'name: "範例主體"'), encoding="utf-8")
+    with pytest.raises(SystemExit, match="第 1 筆缺少 subject"):
+        main(["--dry-run", "--niche", str(niche), "--out", str(tmp_path)])

@@ -1,4 +1,4 @@
-# 複製成 niche.yaml 再改。這些欄位都是給 LLM 的指示。
+# 複製成 niche.yaml 再改。playlist_id 和 facts 的 source 不給 LLM,其餘欄位會寫進選題或腳本的指示。
 channel_name: "我的頻道"
 audience: "剛開始接觸這個領域、怕被坑的新手"
 tone: "像朋友聊天,白話,不賣弄術語"
