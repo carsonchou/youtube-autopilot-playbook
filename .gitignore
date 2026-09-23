@@ -1,0 +1,7 @@
+.env
+niche.yaml
+client_secret*.json
+token*.json
+output/
+__pycache__/
+.pytest_cache/
