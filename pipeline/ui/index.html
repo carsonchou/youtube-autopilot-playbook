@@ -587,7 +587,7 @@ const h = (tag, attrs = {}, ...kids) => {
 };
 
 let S = null, step = 0, seeds = [], voice = VOICES[0][0], fmt = "long", polling = null;
-let models = null, model = "", modelDirty = false;
+let models = null, model = "", modelDirty = false, voiceDirty = false;
 const MAJOR = ["openai", "anthropic", "google", "deepseek", "x-ai", "qwen", "mistralai"];
 
 async function api(path, body) {
@@ -646,11 +646,17 @@ async function refreshChecks() {
 }
 function ffmpegHelp(inst) {
   if (inst && inst.running)
-    return ["安裝中，要下載約 250 MB，看網速大概 1～10 分鐘。這裡會自己更新，不用關掉頁面。",
+    return [(/Mac/.test(navigator.userAgent)
+        ? "安裝中，Homebrew 會連同 ffmpeg 需要的其他套件一起下載，看網速可能要幾分鐘到十幾分鐘。"
+        : "安裝中，要下載約 250 MB，看網速大概 1～10 分鐘。") + "這裡會自己更新，不用關掉頁面。",
       h("span", { class: "tail" }, inst.log.slice(-1)[0] || "啟動中…")];
+  const reopen = "關掉啟動精靈的那個終端機視窗，重新雙擊 start.bat（Mac 是 start.command）再打開一次。";
   if (inst && inst.returncode === 0)
-    return ["安裝程式說裝好了，但精靈還找不到它。請關掉黑色視窗，重新雙擊 start.bat / start.command 再打開一次。"];
-  const failed = inst && inst.returncode !== null ? ["上次安裝沒成功：", h("span", { class: "tail" }, inst.log.slice(-2).join(" / ") || "沒有訊息"), " "] : [];
+    return ["安裝程式說裝好了，但精靈還找不到它。請" + reopen];
+  // winget 對「已經裝過」也回非 0,所以不下「失敗」的定論,讓使用者看訊息判斷
+  const failed = inst && inst.returncode !== null ? ["安裝程式結束了，但精靈還找不到 ffmpeg。它最後說：",
+    h("span", { class: "tail" }, inst.log.slice(-2).join(" / ") || "沒有訊息"),
+    "如果上面寫的是「已安裝」之類的意思，代表其實裝好了，請" + reopen + "其他情況可以再按一次，或照最下面的方式自己裝。", " "] : [];
   return [...failed, "剪片用的免費工具，還沒安裝。按下面的按鈕會自動下載安裝（Windows 用內建的 winget，Mac 要先有 Homebrew）。",
     h("span", { class: "row" }, h("button", { class: "btn primary", onclick: installFfmpeg }, "一鍵安裝 ffmpeg")),
     "自己裝也可以：Windows 在「終端機」貼上 winget install Gyan.FFmpeg；Mac 先到 brew.sh 裝 Homebrew，再輸入 brew install ffmpeg。裝完回來按重新整理。"];
@@ -711,9 +717,9 @@ function renderServices() {
   if (!modelDirty) model = e.LLM_MODEL || "";
   renderModels();
   $("#yt-guide").open = !S.checks.client_secrets;
-  voice = e.TTS_VOICE || VOICES[0][0];
+  if (!voiceDirty) voice = e.TTS_VOICE || VOICES[0][0];
   $("#voices").replaceChildren(...VOICES.map(([id, n, d]) =>
-    h("button", { class: "opt" + (id === voice ? " on" : ""), onclick: ev => { voice = id; $$("#voices .opt").forEach(o => o.classList.toggle("on", o === ev.currentTarget)); } },
+    h("button", { class: "opt" + (id === voice ? " on" : ""), onclick: ev => { voice = id; voiceDirty = true; $$("#voices .opt").forEach(o => o.classList.toggle("on", o === ev.currentTarget)); } },
       h("b", {}, n), h("span", {}, d))));
 }
 // 粗估一支長片的 token:選題+寫稿兩次呼叫的輸入約 3000,輸出約每分鐘旁白 400
@@ -769,7 +775,7 @@ async function save(kind) {
   if (kind === "niche") await api("/api/niche", collectNiche());
   if (kind === "env") {
     await api("/api/env", { OPENROUTER_API_KEY: $("#key").value, LLM_MODEL: model, TTS_VOICE: voice });
-    modelDirty = false;
+    modelDirty = voiceDirty = false;
     await api("/api/niche", collectNiche());
     $("#key").value = "";
   }
