@@ -208,7 +208,7 @@ class Studio:
         niche, saved = self.niche()
         refresh_path()
         inst = self.install
-        font =env.get("FONT_FILE") or os.environ.get("FONT_FILE") or \
+        font = env.get("FONT_FILE") or os.environ.get("FONT_FILE") or \
             next((p for p in FONT_CANDIDATES if os.path.exists(p)), "")
         return {
             "niche": niche,

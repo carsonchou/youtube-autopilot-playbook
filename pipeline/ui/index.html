@@ -636,7 +636,13 @@ function renderChecks() {
     h("li", {}, h("div", { class: "st " + st }, st === "ok" ? "✓" : st === "no" ? "!" : "·"),
       h("div", {}, h("b", {}, t), h("p", {}, ...[p].flat())))));
   clearTimeout(renderChecks.t);
-  if (S.install && S.install.running) renderChecks.t = setTimeout(() => refresh().catch(() => {}), 2000);
+  // 安裝中只重畫這一塊:完整 refresh() 會把第 4 步還沒存的選擇(聲音等)蓋回去
+  if (S.install && S.install.running) renderChecks.t = setTimeout(() => refreshChecks().catch(() => renderChecks()), 2000);
+}
+async function refreshChecks() {
+  const s = await api("/api/state");
+  S.checks = s.checks; S.install = s.install;
+  renderChecks();
 }
 function ffmpegHelp(inst) {
   if (inst && inst.running)
@@ -651,7 +657,7 @@ function ffmpegHelp(inst) {
 }
 async function installFfmpeg(e) {
   e.target.disabled = true;
-  try { await api("/api/install_ffmpeg", {}); await refresh(); }
+  try { await api("/api/install_ffmpeg", {}); await refreshChecks(); }
   catch (err) { toast(err.message, true); e.target.disabled = false; }
 }
 
