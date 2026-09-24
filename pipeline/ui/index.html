@@ -4,24 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>頻道工作室</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%23d4a35a%22/%3E%3Cpath d=%22M12 9l12 7-12 7z%22 fill=%22%231a1409%22/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%23ededed%22/%3E%3Cpath d=%22M12 9l12 7-12 7z%22 fill=%22%230a0a0a%22/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0c0e11;
-  --bg-2: #111419;
-  --surface: #161a20;
-  --surface-2: #1c2129;
-  --line: #262c35;
-  --line-2: #323a45;
-  --text: #ebe7e1;
-  --muted: #8d939c;
-  --faint: #5d636c;
-  --accent: #d4a35a;
-  --accent-soft: rgba(212, 163, 90, .12);
-  --accent-line: rgba(212, 163, 90, .38);
+  --bg: #0a0a0a;
+  --bg-2: #0e0e0e;
+  --surface: #141414;
+  --surface-2: #1b1b1b;
+  --line: #242424;
+  --line-2: #303030;
+  --text: #ededed;
+  --muted: #8f8f8f;
+  --faint: #5f5f5f;
+  --accent: #ededed;
+  --accent-soft: rgba(237, 237, 237, .08);
+  --accent-line: rgba(237, 237, 237, .32);
   --ok: #7fb58c;
   --warn: #d9a441;
   --bad: #d77a6e;
@@ -34,11 +34,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
 body {
-  background:
-    radial-gradient(1200px 600px at 85% -10%, rgba(212, 163, 90, .07), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgba(90, 120, 160, .06), transparent 60%),
-    var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
   color: var(--text);
   font: 15px/1.7 var(--sans);
   -webkit-font-smoothing: antialiased;
@@ -54,14 +50,14 @@ a:hover { border-color: var(--accent); }
 aside {
   position: sticky; top: 0; height: 100vh;
   padding: 36px 28px; border-right: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(22, 26, 32, .65), rgba(12, 14, 17, .4));
+  background: var(--bg-2);
   backdrop-filter: blur(6px);
   display: flex; flex-direction: column;
 }
 .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 44px; }
 .mark {
   width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
-  background: linear-gradient(135deg, #2a2418, #16130d); border: 1px solid var(--accent-line);
+  background: var(--surface-2); border: 1px solid var(--line-2);
   color: var(--accent); font: 700 16px var(--serif);
 }
 .brand b { font: 700 17px var(--serif); letter-spacing: .06em; display: block; }
@@ -85,7 +81,7 @@ aside {
 .steps li.done .dot::after { content: "✓"; }
 .steps li.done .dot span { display: none; }
 .steps li.active { color: var(--text); }
-.steps li.active .dot { background: var(--accent); border-color: var(--accent); color: #1a1409; font-weight: 700; box-shadow: 0 0 0 5px var(--accent-soft); }
+.steps li.active .dot { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 700; box-shadow: 0 0 0 5px var(--accent-soft); }
 .steps li.active .dot::after { content: none; }
 .steps li.active .dot span { display: inline; }
 .steps .t { font-weight: 500; font-size: 14.5px; line-height: 27px; }
@@ -148,7 +144,7 @@ input:focus, textarea:focus, select:focus { border-color: var(--accent-line); bo
 .preview { display: flex; gap: 18px; align-items: center; padding: 22px; border-radius: var(--radius); border: 1px dashed var(--line-2); background: rgba(0, 0, 0, .18); }
 .avatar {
   flex: none; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
-  background: radial-gradient(circle at 30% 25%, #3b3222, #17140e); border: 1px solid var(--accent-line);
+  background: var(--surface-2); border: 1px solid var(--line-2);
   color: var(--accent); font: 700 26px var(--serif);
 }
 .preview .n { font: 700 18px var(--serif); }
@@ -255,8 +251,8 @@ summary:hover { color: var(--text); }
   transition: all .2s; display: inline-flex; align-items: center; gap: 8px;
 }
 .btn:hover:not(:disabled) { border-color: var(--faint); transform: translateY(-1px); }
-.btn.primary { background: linear-gradient(180deg, #ddb06b, #c7954c); border-color: #d9a85e; color: #1a1409; box-shadow: 0 8px 24px -10px rgba(212, 163, 90, .55); }
-.btn.primary:hover:not(:disabled) { box-shadow: 0 12px 28px -10px rgba(212, 163, 90, .7); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.btn.primary:hover:not(:disabled) { background: #fff; border-color: #fff; }
 .btn.ghost { background: none; border-color: transparent; color: var(--muted); }
 .btn.ghost:hover:not(:disabled) { color: var(--text); }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
