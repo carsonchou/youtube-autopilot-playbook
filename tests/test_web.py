@@ -235,3 +235,32 @@ def test_dry_run_job_end_to_end(srv):
     code, body = req(srv, "GET", "/files/%s/video.mp4?t=%s" % (job["name"], studio.token))
     assert code == 200 and len(body) > 1000
     assert not (studio.root / "output" / "topics_used.json").exists()  # dry-run 不記題目
+
+
+def test_install_ffmpeg_streams_log_and_reports_failure(srv, monkeypatch):
+    # 假安裝程式:UTF-8 行 + cp950 行 + \r 覆寫的進度列,最後失敗;跑的期間再按一次要 409
+    import sys
+    script = ("import sys,time;o=sys.stdout.buffer;"
+              "o.write('找到 FFmpeg\\n'.encode('utf-8'));"
+              "o.write('安裝失敗\\n'.encode('cp950'));"
+              "o.write(b'10%\\r50%\\r100%\\n');o.flush();time.sleep(1);sys.exit(3)")
+    monkeypatch.setattr("pipeline.web.ffmpeg_install_cmd", lambda: [sys.executable, "-c", script])
+    monkeypatch.setattr("pipeline.web.locale.getpreferredencoding", lambda *a: "cp950")
+    assert req(srv, "POST", "/api/install_ffmpeg", {})[0] == 200
+    assert req(srv, "POST", "/api/install_ffmpeg", {})[0] == 409
+    for _ in range(100):
+        inst = json.loads(req(srv, "GET", "/api/state")[1])["install"]
+        if not inst["running"]:
+            break
+        time.sleep(0.1)
+    assert inst["returncode"] == 3
+    assert inst["log"] == ["找到 FFmpeg", "安裝失敗", "100%"]
+
+
+def test_install_ffmpeg_unavailable_is_400(srv, monkeypatch):
+    def nope():
+        raise ValueError("沒有 winget")
+    monkeypatch.setattr("pipeline.web.ffmpeg_install_cmd", nope)
+    code, body = req(srv, "POST", "/api/install_ffmpeg", {})
+    assert code == 400 and "winget" in json.loads(body)["error"]
+    assert req(srv, "POST", "/api/install_ffmpeg", {}, token=False)[0] == 403

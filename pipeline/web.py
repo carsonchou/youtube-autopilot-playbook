@@ -5,6 +5,7 @@
 必須是本機位址(擋 DNS rebinding)。API 金鑰只寫不讀,狀態只回「有沒有設定」。
 """
 import json
+import locale
 import mimetypes
 import os
 import re
@@ -135,6 +136,52 @@ def _has_break(s):
     return "".join(s.splitlines()) != s
 
 
+BREW = ["/opt/homebrew/bin", "/usr/local/bin"]
+
+
+def ffmpeg_install_cmd():
+    """一鍵安裝 ffmpeg 要跑的指令;這台電腦沒辦法一鍵裝就丟 ValueError(訊息給使用者看)。"""
+    if sys.platform == "win32":
+        if not shutil.which("winget"):
+            raise ValueError("這台電腦沒有 winget。請到 Microsoft Store 搜尋「應用程式安裝程式」並更新,再按一次")
+        return ["winget", "install", "-e", "--id", "Gyan.FFmpeg",
+                "--accept-source-agreements", "--accept-package-agreements"]
+    if sys.platform == "darwin":
+        brew = shutil.which("brew") or next((d + "/brew" for d in BREW if os.path.exists(d + "/brew")), None)
+        if not brew:
+            raise ValueError("Mac 要先裝 Homebrew:到 brew.sh 照首頁指示裝好,再回來按一次")
+        return [brew, "install", "ffmpeg"]
+    raise ValueError("請用系統的套件管理員安裝,例如 sudo apt install ffmpeg")
+
+
+def refresh_path():
+    """把安裝程式新加的 PATH 併進本行程(之後產片的子行程會繼承),裝完不用重開精靈。"""
+    dirs = BREW
+    if sys.platform == "win32":
+        import winreg
+        dirs = []
+        for hive, sub in ((winreg.HKEY_CURRENT_USER, "Environment"),
+                          (winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment")):
+            try:
+                with winreg.OpenKey(hive, sub) as k:
+                    dirs += os.path.expandvars(winreg.QueryValueEx(k, "Path")[0]).split(os.pathsep)
+            except OSError:
+                pass
+    cur = os.environ.get("PATH", "").split(os.pathsep)
+    add = [d for d in dirs if d and d not in cur and os.path.isdir(d)]
+    if add:
+        os.environ["PATH"] = os.pathsep.join(cur + add)
+
+
+def _decode(line):
+    # winget 被導向時同一段輸出混著 UTF-8 和系統編碼(繁中是 cp950);進度列用 \r 覆寫,只留最後一段
+    line = line.rstrip(b"\r\n").split(b"\r")[-1]
+    try:
+        return line.decode("utf-8")
+    except UnicodeDecodeError:
+        return line.decode(locale.getpreferredencoding(False), "replace")
+
+
 class Studio:
     """精靈的狀態:工作目錄、token、目前這一個產片工作。"""
 
@@ -143,6 +190,7 @@ class Studio:
         self.token = secrets.token_urlsafe(24)
         self.lock = threading.Lock()
         self.job = None  # {"mode","running","log","returncode","name"}
+        self.install = None  # {"running","log","returncode"}
         self._models = None
 
     # ---- 狀態 ----
@@ -158,7 +206,9 @@ class Studio:
     def state(self):
         env = self.env()
         niche, saved = self.niche()
-        font = env.get("FONT_FILE") or os.environ.get("FONT_FILE") or \
+        refresh_path()
+        inst = self.install
+        font =env.get("FONT_FILE") or os.environ.get("FONT_FILE") or \
             next((p for p in FONT_CANDIDATES if os.path.exists(p)), "")
         return {
             "niche": niche,
@@ -175,6 +225,8 @@ class Studio:
                 "client_secrets": (self.root / (env.get("YT_CLIENT_SECRETS") or "client_secrets.json")).exists(),
                 "token": (self.root / (env.get("YT_TOKEN") or "token.json")).exists(),
             },
+            "install": inst and {"running": inst["running"], "returncode": inst["returncode"],
+                                 "log": inst["log"][-6:]},
             "jobs": self.recent_jobs(),
         }
 
@@ -224,6 +276,27 @@ class Studio:
             raise ValueError("這不是「電腦版應用程式」的 OAuth 用戶端檔案(JSON 裡要有 installed)")
         name = self.env().get("YT_CLIENT_SECRETS") or "client_secrets.json"
         _atomic_write(self.root / name, json.dumps(d, ensure_ascii=False, indent=2))
+
+    def install_ffmpeg(self):
+        cmd = ffmpeg_install_cmd()
+        with self.lock:
+            if self.install and self.install["running"]:
+                return False
+            try:
+                proc = subprocess.Popen(cmd, cwd=str(self.root), stdin=subprocess.DEVNULL,
+                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            except OSError as e:
+                raise ValueError("安裝程式啟動失敗:%s" % e)
+            self.install = inst = {"running": True, "log": [], "returncode": None}
+        def watch():
+            for line in proc.stdout:
+                s = _decode(line).strip()
+                if s:
+                    inst["log"] = (inst["log"] + [s])[-100:]
+            inst["returncode"] = proc.wait()
+            inst["running"] = False
+        threading.Thread(target=watch, daemon=True).start()
+        return True
 
     # ---- OpenRouter(只讀) ----
     def models(self):
@@ -403,6 +476,10 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/run":
                 if not st.start_job(data if isinstance(data, dict) else {}):
                     return self._send(409, {"error": "已經有一支片在做了,等它完成"})
+                return self._send(200, {"ok": True})
+            if path == "/api/install_ffmpeg":
+                if not st.install_ffmpeg():
+                    return self._send(409, {"error": "正在安裝了,等它跑完"})
                 return self._send(200, {"ok": True})
             if path == "/api/test_key":
                 return self._send(200, st.test_key(data))

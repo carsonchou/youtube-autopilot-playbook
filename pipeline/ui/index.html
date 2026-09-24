@@ -188,6 +188,8 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .st.later { background: rgba(217, 164, 65, .12); color: var(--warn); }
 .checks b { font-weight: 500; }
 .checks p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.checks .row { display: block; margin: 10px 0; }
+.checks .tail { display: block; margin: 6px 0; font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--faint); word-break: break-all; }
 code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; }
 
 .badge { font-family: var(--sans); font-weight: 500; vertical-align: middle; margin-left: 6px; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 10px; border-radius: 999px; }
@@ -625,15 +627,32 @@ function renderChecks() {
   const c = S.checks, e = S.env;
   const items = [
     ["ok", "Python " + c.python, "已安裝。"],
-    [c.ffmpeg ? "ok" : "no", "ffmpeg", c.ffmpeg ? "已安裝，可以剪片。" :
-      "剪片用的免費工具，還沒安裝。Windows：按開始鍵輸入「終端機」打開，貼上 winget install Gyan.FFmpeg 按 Enter，跑完後關掉黑色視窗、重新雙擊 start.bat。Mac：到 brew.sh 照首頁指示裝好 Homebrew，再在「終端機」輸入 brew install ffmpeg。"],
+    [c.ffmpeg ? "ok" : "no", "ffmpeg", c.ffmpeg ? "已安裝，可以剪片。" : ffmpegHelp(S.install)],
     [c.font ? "ok" : "no", "中文字型", c.font ? "找到了。" : "影片字卡要用的中文字型找不到（Windows 和 Mac 通常內建，少見）。請在專案資料夾的 .env 檔加一行 FONT_FILE=字型檔完整路徑。"],
     [e.OPENROUTER_API_KEY && e.LLM_MODEL ? "ok" : "later", "AI 寫稿金鑰", e.OPENROUTER_API_KEY && e.LLM_MODEL ? "已設定。" : "第 4 步設定；不設也能先試跑。"],
     [c.client_secrets ? "ok" : "later", "YouTube 上傳", c.client_secrets ? (c.token ? "已授權。" : "已設定，第一次上傳時會請你登入 Google。") : "第 4 步設定；不上傳可以略過。"],
   ];
   $("#checks").replaceChildren(...items.map(([st, t, p]) =>
     h("li", {}, h("div", { class: "st " + st }, st === "ok" ? "✓" : st === "no" ? "!" : "·"),
-      h("div", {}, h("b", {}, t), h("p", {}, p)))));
+      h("div", {}, h("b", {}, t), h("p", {}, ...[p].flat())))));
+  clearTimeout(renderChecks.t);
+  if (S.install && S.install.running) renderChecks.t = setTimeout(() => refresh().catch(() => {}), 2000);
+}
+function ffmpegHelp(inst) {
+  if (inst && inst.running)
+    return ["安裝中，要下載約 250 MB，看網速大概 1～10 分鐘。這裡會自己更新，不用關掉頁面。",
+      h("span", { class: "tail" }, inst.log.slice(-1)[0] || "啟動中…")];
+  if (inst && inst.returncode === 0)
+    return ["安裝程式說裝好了，但精靈還找不到它。請關掉黑色視窗，重新雙擊 start.bat / start.command 再打開一次。"];
+  const failed = inst && inst.returncode !== null ? ["上次安裝沒成功：", h("span", { class: "tail" }, inst.log.slice(-2).join(" / ") || "沒有訊息"), " "] : [];
+  return [...failed, "剪片用的免費工具，還沒安裝。按下面的按鈕會自動下載安裝（Windows 用內建的 winget，Mac 要先有 Homebrew）。",
+    h("span", { class: "row" }, h("button", { class: "btn primary", onclick: installFfmpeg }, "一鍵安裝 ffmpeg")),
+    "自己裝也可以：Windows 在「終端機」貼上 winget install Gyan.FFmpeg；Mac 先到 brew.sh 裝 Homebrew，再輸入 brew install ffmpeg。裝完回來按重新整理。"];
+}
+async function installFfmpeg(e) {
+  e.target.disabled = true;
+  try { await api("/api/install_ffmpeg", {}); await refresh(); }
+  catch (err) { toast(err.message, true); e.target.disabled = false; }
 }
 
 /* ---------- 頻道定位 ---------- */
