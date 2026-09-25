@@ -656,9 +656,9 @@ function ffmpegHelp(inst) {
   // winget 對「已經裝過」也回非 0,所以不下「失敗」的定論,讓使用者看訊息判斷
   const failed = inst && inst.returncode !== null ? ["安裝程式結束了，但精靈還找不到 ffmpeg。它最後說：",
     h("span", { class: "tail" }, inst.log.slice(-2).join(" / ") || "沒有訊息"),
-    "如果上面寫的是「已安裝」之類的意思，代表其實裝好了，請" + reopen + "其他情況可以再按一次，或照最下面的方式自己裝。", " "] : [];
-  return [...failed, "剪片用的免費工具，還沒安裝。按下面的按鈕會自動下載安裝（Windows 用內建的 winget，Mac 要先有 Homebrew）。",
-    h("span", { class: "row" }, h("button", { class: "btn primary", onclick: installFfmpeg }, "一鍵安裝 ffmpeg")),
+    "如果上面寫的是「已安裝」之類的意思，代表其實裝好了，請" + reopen + "其他情況可以按「再裝一次」，或照最下面的方式自己裝。"] : [];
+  return [...(failed.length ? failed : ["剪片用的免費工具，還沒安裝。按下面的按鈕會自動下載安裝（Windows 用內建的 winget，Mac 要先有 Homebrew）。"]),
+    h("span", { class: "row" }, h("button", { class: "btn primary", onclick: installFfmpeg }, failed.length ? "再裝一次" : "一鍵安裝 ffmpeg")),
     "自己裝也可以：Windows 在「終端機」貼上 winget install Gyan.FFmpeg；Mac 先到 brew.sh 裝 Homebrew，再輸入 brew install ffmpeg。裝完回來按重新整理。"];
 }
 async function installFfmpeg(e) {
